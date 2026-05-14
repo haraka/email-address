@@ -313,8 +313,8 @@ function generateMarkdown(results) {
       ? `
 ## Validation
 
-Both *email-address* and *@hapi/address* expose a boolean \`isValid\` / \`isEmailValid\` API. They differ in scope: *email-address* validates the full Envelope grammar (quoted local-parts, IP literals);
-*@hapi/address* targets web-form validation and rejects those forms.
+Both _email-address_ and _@hapi/address_ expose a boolean \`isValid\` / \`isEmailValid\` API. They differ in scope: _email-address_ validates the full Envelope grammar (quoted local-parts, IP literals);
+_@hapi/address_ targets web-form validation and rejects those forms.
 
 | Description | Input | email-address<br>(ops/s) | @hapi/address<br>(ops/s) |
 |-------------|-------|-------------------------:|-------------------------:|
@@ -329,7 +329,7 @@ ${validationRows()}
 
   return `# Performance Benchmarks
 
-[@haraka/email-address][hea] (referred to as *email-address* throughout) is benchmarked in the 3 ways it can be used:
+[@haraka/email-address][hea] (referred to as _email-address_ throughout) is benchmarked in the 3 ways it can be used:
 
 1. [Envelope parsing](#envelope-parsing) of SMTP envelope addresses ([RFC 5321][rfc5321]).
 2. [Header parsing](#header-parsing) of Email headers ([RFC 5322][rfc5322]).
@@ -344,8 +344,8 @@ ${validationRows()}
 | [address-rfc2822][addr2822] | Header | [email-addresses][eaddr] PEG parser | ~${headerAvgMult}× faster |
 | [nodemailer][nodemailer] | Header | hand-rolled tokeniser | ~${nmAvgMult}× faster |
 ${summaryHapiRow}
-*email-address* replaces both legacy Haraka packages with a native O(1) recursive descent
-parser. The nearley-compiled grammars carry a significant per-parse overhead from the Earley chart algorithm.
+- _email-address_ replaces both legacy Haraka packages with a native O(1) recursive descent parser.
+- The nearley-compiled grammars carry a significant per-parse overhead from the Earley chart algorithm.
 
 ## Header Parsing
 
@@ -355,8 +355,8 @@ ${headerRows()}
 
 ## Envelope Parsing
 
-- *address-rfc2821* and *email-address* also accept the \`<Path>\` wrapping form used in SMTP commands (\`MAIL FROM:<user@example.com>\`).
-- *smtp-address-parser* only parses the bare mailbox form.
+- _address-rfc2821_ and _email-address_ also accept the \`<Path>\` wrapping form used in SMTP commands (\`MAIL FROM:<user@example.com>\`).
+- _smtp-address-parser_ only parses the bare mailbox form.
 
 | Description | Input | email-address<br>(ops/s) | address-rfc2821<br>(ops/s) | smtp-address-parser<br>(ops/s) |
 |-------------|-------|-------------------------:|---------------------------:|-------------------------------:|

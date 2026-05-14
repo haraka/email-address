@@ -6,6 +6,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### [3.1.1] - 2026-05-14
 
+- fix: prevent prototype pollution during hydration
 - test: added additonal test cases
 - doc(LICENSE): added file
 

@@ -111,6 +111,80 @@ describe('Address formatting methods', () => {
   })
 })
 
+describe('Address security — rehydration allowlist', () => {
+  it('does not copy inherited enumerable properties', () => {
+    const proto = { injected: 'evil' }
+    const obj = Object.create(proto)
+    obj.original = '<u@example.com>'
+    obj.user = 'u'
+    obj.host = 'example.com'
+
+    const address = new Address(obj)
+    assert.equal(address.user, 'u')
+    assert.equal(Object.hasOwn(address, 'injected'), false)
+  })
+
+  it('does not copy __proto__ from rehydrated object', () => {
+    const obj = Object.create(null)
+    obj.original = '<u@example.com>'
+    obj.user = 'u'
+    obj.host = 'example.com'
+    // Simulate a parsed JSON.parse result that tries to mutate __proto__
+    Object.defineProperty(obj, '__proto__', {
+      value: { pwned: true },
+      enumerable: true,
+    })
+
+    const address = new Address(obj)
+    assert.equal(address.pwned, undefined)
+  })
+
+  it('rejects control characters in user during rehydration', () => {
+    assert.throws(
+      () =>
+        new Address({
+          original: '<u@example.com>',
+          user: 'u\r\nBcc: evil@x.com',
+          host: 'example.com',
+        }),
+      /control characters/,
+    )
+  })
+
+  it('rejects control characters in host during rehydration', () => {
+    assert.throws(
+      () =>
+        new Address({
+          original: '<u@example.com>',
+          user: 'u',
+          host: 'example.com\r\nX-Injected: 1',
+        }),
+      /control characters/,
+    )
+  })
+})
+
+describe('Address security — build-from-parts', () => {
+  it('rejects CR/LF in user', () => {
+    assert.throws(
+      () => new Address('user\r\nBcc: attacker@evil.com', 'example.com'),
+      /control characters/,
+    )
+  })
+
+  it('rejects CR/LF in host', () => {
+    assert.throws(() => new Address('user', 'example.com\r\nX-Injected: 1'), /control characters/)
+  })
+
+  it('rejects bare LF in user', () => {
+    assert.throws(() => new Address('user\nfoo', 'example.com'), /control characters/)
+  })
+
+  it('rejects NUL byte in host', () => {
+    assert.throws(() => new Address('user', 'exa\x00mple.com'), /control characters/)
+  })
+})
+
 describe('Address null checks', () => {
   it('isNull() is true for <>', () => {
     assert.equal(new Address('<>').isNull(), true)
