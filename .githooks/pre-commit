@@ -1,0 +1,11 @@
+#!/bin/sh
+# Regenerate index.cjs from index.js when index.js is part of the
+# staged change set, and add the result to the commit. Set up by the
+# package's `prepare` script via `git config core.hooksPath .githooks`.
+
+set -e
+
+if git diff --cached --name-only --diff-filter=ACMR | grep -qx 'index.js'; then
+  node scripts/build-cjs.js
+  git add index.cjs
+fi

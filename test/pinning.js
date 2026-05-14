@@ -1,5 +1,3 @@
-'use strict'
-
 // Pinning tests written immediately before a parser refactor (nearley →
 // hand-rolled recursive descent). Each test captures a behavior the existing
 // suite did NOT explicitly cover. Their job is to make the refactor a
@@ -11,10 +9,10 @@
 // fallback in the current grammar). They are pinned as-is for refactor
 // fidelity. Tightening any of these is appropriate for a follow-up PR.
 
-const { describe, it } = require('node:test')
-const assert = require('node:assert/strict')
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 
-const { Address } = require('..')
+import { Address } from '../index.js'
 
 describe('pinning — trailing input', () => {
   const trailingCases = [
