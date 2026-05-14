@@ -35,5 +35,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 [addr2821]: https://github.com/haraka/node-address-rfc2821
 [addr2822]: https://github.com/haraka/node-address-rfc2822
 [3.0.0]: https://github.com/haraka/email-address/releases/tag/v3.0.0
-[4.0.0]: https://github.com/haraka/email-address/releases/tag/v4.0.0
 [3.1.0]: https://github.com/haraka/email-address/releases/tag/v3.1.0
