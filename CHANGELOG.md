@@ -15,7 +15,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   - much faster, especially on long addresses
   - zero dependencies
   - better RFC adherence, across the board
-- feat: dual-package layout, ESM (`index.js`) is canonical, CJS (`index.cjs`) is auto-generated
+- feat: dual-package, ESM (`index.js`) is canonical, CJS (`index.cjs`) is generated
 - feat: a `postel: true` option to permit lax acceptance.
   - raises the 256-octet path limit to the 998-octet SMTP text-line maximum
   - relaxes IPv6 address parsing
