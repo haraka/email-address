@@ -1,29 +1,31 @@
 {
   "name": "@haraka/email-address",
-  "version": "3.0.1",
-  "description": "Email address parser",
+  "version": "3.1.0",
+  "description": "RFC-5321 envelope and RFC-5322 header email-address parser",
   "author": {
     "name": "The Haraka Team",
     "url": "http://haraka.github.io"
   },
   "files": [
     "CHANGELOG.md",
+    "dist/cjs/index.cjs",
+    "dist/cjs/lib/*.cjs",
     "examples/cjs.cjs",
     "examples/esm.mjs",
-    "index.cjs",
     "index.d.ts",
-    "index.js"
+    "index.js",
+    "lib/*.js"
   ],
   "type": "module",
-  "main": "./index.cjs",
+  "main": "./dist/cjs/index.cjs",
   "module": "./index.js",
   "types": "./index.d.ts",
   "exports": {
     ".": {
       "types": "./index.d.ts",
       "import": "./index.js",
-      "require": "./index.cjs",
-      "default": "./index.cjs"
+      "require": "./dist/cjs/index.cjs",
+      "default": "./dist/cjs/index.cjs"
     },
     "./package.json": "./package.json"
   },
@@ -50,8 +52,8 @@
     "check:cjs": "node scripts/build-cjs.js --check",
     "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
     "prepack": "node scripts/build-cjs.js",
-    "lint": "npx eslint index.js index.cjs scripts/*.js test/*.js test/*.cjs",
-    "lint:fix": "npx eslint --fix index.js index.cjs scripts/*.js test/*.js test/*.cjs",
+    "lint": "npx eslint index.js 'lib/*.js' 'dist/cjs/index.cjs' 'dist/cjs/lib/*.cjs' scripts/*.js test/*.js test/*.cjs",
+    "lint:fix": "npx eslint --fix index.js 'lib/*.js' 'dist/cjs/index.cjs' 'dist/cjs/lib/*.cjs' scripts/*.js test/*.js test/*.cjs",
     "test": "node --test 'test/*.js' 'test/*.cjs'",
     "test:coverage": "node --test --experimental-test-coverage 'test/*.js' 'test/*.cjs'",
     "test:coverage:lcov": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info 'test/*.js' 'test/*.cjs'",

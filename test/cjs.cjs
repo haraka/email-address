@@ -42,6 +42,58 @@ describe('CJS entry point', () => {
     assert.match(a.host, /^u?xn--/)
   })
 
+  it('exposes parseHeader, parseFrom, parseSender, parseReplyTo, Group, validator, name-utils', () => {
+    for (const k of [
+      'parseEnvelope',
+      'parseHeader',
+      'parseFrom',
+      'parseSender',
+      'parseReplyTo',
+      'parseAddress',
+      'isValid',
+      'Group',
+      'nameCase',
+      'isAllLower',
+      'isAllUpper',
+      'extractName',
+    ]) {
+      assert.equal(typeof cjsModule[k], 'function', `expected ${k} to be a function`)
+    }
+  })
+
+  it('every dist/cjs/lib/*.cjs file is requirable on its own', () => {
+    // Catches generator regressions that emit syntactically-broken CJS.
+    for (const m of [
+      'cursor',
+      'literals',
+      'envelope',
+      'header',
+      'address',
+      'validator',
+      'name-utils',
+    ]) {
+      const mod = require(`../dist/cjs/lib/${m}.cjs`)
+      assert.equal(typeof mod, 'object', `dist/cjs/lib/${m}.cjs should export an object`)
+      assert.notEqual(Object.keys(mod).length, 0, `dist/cjs/lib/${m}.cjs should have exports`)
+    }
+  })
+
+  it('plain-address validator works through CJS', () => {
+    assert.equal(cjsModule.isValid('user@example.com'), true)
+    assert.equal(cjsModule.isValid('not-an-email'), false)
+    const a = cjsModule.parseAddress('first.last@example.com')
+    assert.equal(a.user, 'first.last')
+    assert.equal(a.host, 'example.com')
+  })
+
+  it('parseHeader works through CJS', () => {
+    const r = cjsModule.parseHeader('"Alice" <a@example.com>, Friends: x@y, z@y;')
+    assert.equal(r.length, 2)
+    assert.equal(r[0].phrase, 'Alice')
+    assert.ok(r[1] instanceof cjsModule.Group)
+    assert.equal(r[1].addresses.length, 2)
+  })
+
   it('returns the same Address constructor as the ESM entry point', async () => {
     // Sanity: `require('./index.cjs').Address` and the ESM `import` should
     // refer to constructors that produce indistinguishable instances. We
