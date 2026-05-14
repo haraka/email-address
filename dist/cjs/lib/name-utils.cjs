@@ -44,18 +44,14 @@ function stripBracketed(s, open, close) {
 
 // Detect an encoded-word phrase (`=?charset?encoding?text?=`). We only
 // need to know whether the marker sequence `=?` is followed somewhere
-// by a closing `?=` — semantics match the original `/=\?.*?\?=/`
-// test
+// by a closing `?=`
 function containsEncodedWord(s) {
   const start = s.indexOf('=?')
   if (start === -1) return false
   return s.indexOf('?=', start + 2) !== -1
 }
 
-// Reorder a "Last, First" string to "First Last". The original
-// `/^([^\s]+) ?, ?(.*)$/` could ping-pong its `[^\s]+` and the
-// literal `,` (both match the comma char), so CodeQL flagged it. A
-// single indexOf + suffix check is linear and unambiguous.
+// Reorder a "Last, First" string to "First Last".
 function reorderLastFirst(s) {
   const commaIdx = s.indexOf(',')
   if (commaIdx <= 0) return s
@@ -70,9 +66,7 @@ function reorderLastFirst(s) {
   return `${after} ${before}`
 }
 
-// Strip every leading/trailing char in `chars` from `s`. Replaces the
-// alternation regex `/(^[\s'"]+|[\s'"]+$)/g`; deterministic scan from
-// both ends keeps it linear (CodeQL: Polynomial regex).
+// Strip every leading/trailing char in `chars` from `s`.
 function stripEdges(s) {
   const isEdgeChar = (ch) => /[\s'"]/.test(ch)
   let start = 0

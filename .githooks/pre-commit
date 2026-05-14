@@ -1,8 +1,7 @@
 #!/bin/sh
 # Regenerate every <src>.cjs mirror whenever any ESM source (index.js
 # or anything under lib/) is part of the staged change set, and add
-# the result to the commit. The CJS tree lives under dist/cjs/ so
-# dropping CJS later is a single `rm -rf dist/`. Set up by the
+# the result to the commit. The CJS tree lives under dist/cjs/. Set up by the
 # package's `prepare` script via `git config core.hooksPath .githooks`.
 
 set -e
