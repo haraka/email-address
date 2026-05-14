@@ -27,6 +27,24 @@ export interface HeaderParseOptions {
   allowAtInDisplayName?: boolean
   /** Default `false` — reject `,` inside display names. */
   allowCommaInDisplayName?: boolean
+  /**
+   * Be liberal in what you accept. When `true`, two RFC-5322 §4.4
+   * obsolete productions are admitted in addition to the strict
+   * grammar:
+   *
+   *  - **obs-local-part** — multi-word local-parts such as
+   *    `"foo"."bar"@x.com` or `"foo".bar@x.com` (quoted-string and
+   *    atom words separated by dots).
+   *  - **obs-mbox-list** / **obs-addr-list** / **obs-group-list**
+   *    null entries — leading commas (`, a@x`), interstitial
+   *    commas (`a@x, , b@y`), and runs of commas in groups.
+   *
+   * Control-character relaxations (obs-NO-WS-CTL, obs-qp with control
+   * chars) are **not** admitted — they would re-open header-injection
+   * surface. Plainly malformed inputs (`u@.example.com`,
+   * `u@x..com`) are also still rejected. Default `false`.
+   */
+  postel?: boolean
 }
 
 export declare class Address {

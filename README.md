@@ -3,11 +3,9 @@
 
 # @haraka/email-address
 
-One parser for every email-address shape: SMTP envelope (RFC 5321) and
-message header (RFC 5322 / 6532). Zero runtime dependencies.
+One parser for every email-address shape: SMTP envelope (RFC 5321), email message header (RFC 5322 / 6532), and bare email validation. Zero runtime dependencies. Highly RFC conformant with a lenient [postel](https://en.wikipedia.org/wiki/Robustness_principle) mode for real-world inputs. O(n) performance, see [PERFORMANCE][PERFORMANCE.md].
 
-Dual-published as ESM (`import`) and CJS (`require`); pick whichever
-matches your codebase.
+Dual-published as ESM (`import`) and CJS (`require`); pick to match your codebase.
 
 ```js
 parseEnvelope('<from@example.com>') // → Address
@@ -15,10 +13,8 @@ parseHeader('"Alice" <a@x>, "Bob" <b@x>') // → Address[]
 parseHeader('Friends: a@x, b@x;') // → [Group]
 ```
 
-The envelope side handles `<>`, `<Postmaster>`, dot-atom and quoted
-local-parts, IPv4/IPv6 address literals, and IDN (U-labels →
-punycode). The header side adds display names, comments (including
-nested), folding whitespace, group syntax, and the obsolete
+The envelope side handles `<>`, `<Postmaster>`, dot-atom and quoted local-parts,
+IPv4/IPv6 address literals, and IDN (U-labels → punycode). The header side adds display names, comments (including nested), folding whitespace, group syntax, and the obsolete
 productions real-world mail still emits.
 
 ## Installation
@@ -29,8 +25,7 @@ npm install @haraka/email-address
 
 ## Usage
 
-The package ships ESM and CJS entry points side-by-side. Both expose an
-identical `Address` class.
+The package ships ESM and CJS entry points side-by-side. Both expose an identical `Address` class.
 
 ### Envelopes (RFC 5321)
 
@@ -78,11 +73,7 @@ parseReplyTo('=?utf-8?Q?Anne?= <info@x.example>') // → Address[]
 
 ### Plain-address validation (web forms, general-purpose use)
 
-For places where you just need "is this a valid email address" — sign-up
-forms, contact pages, CSV imports — use `parseAddress` (throws on bad
-input) or `isValid` (returns a boolean). These reject anything that
-isn't a bare `local@domain`: angle brackets, comments, display names,
-address lists, and groups all fail.
+For places where you just need "is this a valid email address" — sign-up forms, contact pages, CSV imports — use `parseAddress` (throws on bad input) or `isValid` (returns a boolean). These reject anything that isn't a bare `local@domain`: angle brackets, comments, display names, address lists, and groups all fail.
 
 ```js
 import { parseAddress, isValid } from '@haraka/email-address'
@@ -114,12 +105,9 @@ parseEnvelope('<u@example.com>').format()
 parseHeader('"Alice" <a@x>')[0].phrase // 'Alice'
 ```
 
-Both styles run end-to-end in [`examples/esm.mjs`](examples/esm.mjs)
-and [`examples/cjs.cjs`](examples/cjs.cjs); each prints parsed fields
-for the same set of inputs and is invoked with plain `node`.
+Both styles run end-to-end in [`examples/esm.mjs`](examples/esm.mjs) and [`examples/cjs.cjs`](examples/cjs.cjs); each prints parsed fields for the same set of inputs.
 
-For internationalized addresses, the parser preserves the original
-U-label form and lazily exposes the A-label (punycode) form:
+For internationalized addresses, the parser preserves the original U-label form and lazily exposes the A-label (punycode) form:
 
 ```js
 const addr = new Address('<δοκιμή@παράδειγμα.gr>')
@@ -142,9 +130,7 @@ The package's `exports` map resolves to the right file automatically:
 
 ## Standards conformance
 
-This parser targets strict conformance to the SMTP envelope grammar by
-default. The table below tracks each relevant RFC and what the module does
-about it.
+This parser targets strict conformance to the SMTP envelope grammar by default. The table below tracks each relevant RFC and what the module does about it.
 
 | RFC                                                                       | Subject                                | Status                                                                                                                                                                                                                                                                                                                          |
 | ------------------------------------------------------------------------- | -------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
@@ -181,17 +167,18 @@ about it.
 
 ### Envelope options
 
-| Option   | Type      | Default | Effect                                                                                                                                                                                                                                                                                                                                                                                                                        |
-| -------- | --------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `postel` | `boolean` | `false` | Be liberal in what you accept. When `true`: (1) malformed `[IPv6:…]` bodies that fail the strict §4.1.3 grammar fall back to the General-address-literal path and are accepted as-is; (2) the 256-octet RFC 5321 §4.5.3.1.3 path limit is raised to the 998-octet SMTP text-line maximum (§4.5.3.1.6), so longer real-world reverse/forward paths still parse. This switch may govern other lenient behaviours in the future. |
+| Option   | Type      | Default | Effect                                                                                                                                                                                                                                                                                                 |
+| -------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `postel` | `boolean` | `false` | Be liberal in what you accept. When `true`: (1) malformed `[IPv6:…]` bodies that fail the strict §4.1.3 grammar fall back to the General-address-literal path and are accepted as-is; (2) the 256-octet RFC 5321 §4.5.3.1.3 path limit is raised to the 998-octet SMTP text-line maximum (§4.5.3.1.6). |
 
 ### Header options
 
-| Option                    | Type                                                                                                                        | Default          | Effect                                                                                                           |
-| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------- | ---------------------------------------------------------------------------------------------------------------- |
-| `startAt`                 | `'address-list' \| 'from' \| 'sender' \| 'reply-to' \| 'mailbox' \| 'mailbox-list' \| 'group' \| 'angle-addr' \| 'address'` | `'address-list'` | Which RFC-5322 production to start at. Mainly used by the `parseFrom` / `parseSender` / `parseReplyTo` wrappers. |
-| `allowAtInDisplayName`    | `boolean`                                                                                                                   | `true`           | Accept `@` inside display names — common in real-world `From:` values like `foo@example <foo@example.com>`.      |
-| `allowCommaInDisplayName` | `boolean`                                                                                                                   | `false`          | Accept `,` inside display names. Off by default because it breaks the `,`-separated address-list grammar.        |
+| Option                    | Type                                                                                                                        | Default          | Effect                                                                                                                                                                                                                                            |
+| ------------------------- | --------------------------------------------------------------------------------------------------------------------------- | ---------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `startAt`                 | `'address-list' \| 'from' \| 'sender' \| 'reply-to' \| 'mailbox' \| 'mailbox-list' \| 'group' \| 'angle-addr' \| 'address'` | `'address-list'` | Which RFC-5322 production to start at. Mainly used by the `parseFrom` / `parseSender` / `parseReplyTo` wrappers.                                                                                                                                  |
+| `allowAtInDisplayName`    | `boolean`                                                                                                                   | `true`           | Accept `@` inside display names — common in real-world `From:` values like `foo@example <foo@example.com>`.                                                                                                                                       |
+| `allowCommaInDisplayName` | `boolean`                                                                                                                   | `false`          | Accept `,` inside display names. Off by default because it breaks the `,`-separated address-list grammar.                                                                                                                                         |
+| `postel`                  | `boolean`                                                                                                                   | `false`          | Be liberal in what you accept. Enables two RFC-5322 §4.4 obs-\* productions: **obs-local-part** (multi-word local-parts such as `"foo"."bar"@x.com`) and **obs-mbox-list** null entries (`a@x, , b@y`, leading or interstitial commas in groups). |
 
 ### `Address` properties
 

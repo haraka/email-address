@@ -10,7 +10,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   - test suite imported from [`address-rfc2822`][addr2822]
 - feat: new top-level functions `parseEnvelope`, `parseHeader`, `parseFrom`, `parseSender`, `parseReplyTo`
 - feat: new `Group` class for RFC-5322 group syntax (`Friends: a@x, b@x;`)
-- feat: `Address` gains `phrase`, `comment`, `address`, and `group` fields. Header-parsed instances populate them
+- feat: `Address` gains `phrase`, `comment`, `address`, and `group` fields.
 - feat: name-handling utilities ported from `address-rfc2822`
 
 ### 3.0.1 - 2026-05-13

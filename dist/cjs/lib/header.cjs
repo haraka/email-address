@@ -186,22 +186,35 @@ function isAtextStart(ch, opts) {
   return false
 }
 
-// local-part := dot-atom / quoted-string (with obs- support for CFWS
-// between atoms and inside).
-function parseHeaderLocalPart(cursor, sink) {
-  skipCFWS(cursor, sink)
+// Read one local-part word — a quoted-string or a single atom run.
+// Returns the raw token (including any surrounding quotes) so the
+// caller can splice multi-word obs-local-parts together verbatim.
+function readWord(cursor) {
   if (cursor.peek() === '"') {
     const q = parseHeaderQuotedString(cursor)
-    return { value: q.raw, isQuoted: true }
+    return { raw: q.raw, isQuoted: true }
   }
-  let local = ''
+  const atom = cursor.match(ATEXT_RE)
+  if (!atom) throw parseError('expected local-part atom', cursor)
+  return { raw: atom, isQuoted: false }
+}
+
+// local-part := dot-atom / quoted-string in strict mode (RFC 5322 §3.4.1).
+// In postel mode the parser also accepts the obs-local-part
+// production `word *("." word)` where each word may be an atom OR a
+// quoted-string, so mixed forms like `"foo".bar` and `bar."foo"`
+// round-trip.
+function parseHeaderLocalPart(cursor, sink, opts) {
+  skipCFWS(cursor, sink)
+  const first = readWord(cursor)
+  // Strict mode: a quoted-string is the whole local-part — no further
+  // segments allowed.
+  if (first.isQuoted && !opts?.postel) {
+    return { value: first.raw, isQuoted: true }
+  }
+  let raw = first.raw
+  let anyQuoted = first.isQuoted
   while (true) {
-    const atom = cursor.match(ATEXT_RE)
-    if (!atom) {
-      if (local.length === 0) throw parseError('expected local-part atom', cursor)
-      break
-    }
-    local += atom
     const beforeCFWS = cursor.pos
     // Speculative — we don't know whether the next non-space is a dot
     // (committing to the local-part) or something else (committing this
@@ -209,18 +222,21 @@ function parseHeaderLocalPart(cursor, sink) {
     // the comment exactly once.
     const scratch = []
     skipCFWS(cursor, scratch)
-    if (cursor.peek() === '.') {
-      // Commit the captured comments — they belong to the local-part.
-      if (sink) for (const c of scratch) sink.push(c)
-      cursor.consume(1)
-      local += '.'
-      skipCFWS(cursor, sink)
-      continue
+    if (cursor.peek() !== '.') {
+      cursor.pos = beforeCFWS
+      break
     }
-    cursor.pos = beforeCFWS
-    break
+    if (sink) for (const c of scratch) sink.push(c)
+    cursor.consume(1)
+    skipCFWS(cursor, sink)
+    // Strict: every additional segment must be an atom (dot-atom rule).
+    // Postel: any word — atom or quoted-string — is OK.
+    const next = opts?.postel ? readWord(cursor) : { raw: cursor.match(ATEXT_RE), isQuoted: false }
+    if (!next.raw) throw parseError('expected atom after "."', cursor)
+    raw += '.' + next.raw
+    anyQuoted = anyQuoted || next.isQuoted
   }
-  return { value: local, isQuoted: false }
+  return { value: raw, isQuoted: anyQuoted }
 }
 
 // domain := dot-atom / domain-literal (with obs- support for CFWS
@@ -258,8 +274,8 @@ function parseHeaderDomain(cursor, sink) {
   return domain
 }
 
-function parseHeaderAddrSpec(cursor, sink) {
-  const local = parseHeaderLocalPart(cursor, sink)
+function parseHeaderAddrSpec(cursor, sink, opts) {
+  const local = parseHeaderLocalPart(cursor, sink, opts)
   skipCFWS(cursor, sink)
   cursor.expect('@')
   skipCFWS(cursor, sink)
@@ -267,7 +283,7 @@ function parseHeaderAddrSpec(cursor, sink) {
   return { user: local.value, original_host: domain }
 }
 
-function parseHeaderAngleAddr(cursor, sink) {
+function parseHeaderAngleAddr(cursor, sink, opts) {
   skipCFWS(cursor, sink)
   cursor.expect('<')
   // Source-route style "@a,@b:user@host" — accept and discard the route.
@@ -286,7 +302,7 @@ function parseHeaderAngleAddr(cursor, sink) {
     cursor.expect(':')
     skipCFWS(cursor, sink)
   }
-  const spec = parseHeaderAddrSpec(cursor, sink)
+  const spec = parseHeaderAddrSpec(cursor, sink, opts)
   skipCFWS(cursor, sink)
   cursor.expect('>')
   return spec
@@ -310,15 +326,15 @@ function parseHeaderMailbox(cursor, opts) {
       // false alarm — rewind and treat as addr-spec
       cursor.pos = start
       sink.length = 0
-      const spec = parseHeaderAddrSpec(cursor, sink)
+      const spec = parseHeaderAddrSpec(cursor, sink, opts)
       skipCFWS(cursor, sink)
       return finishMailbox(cursor, spec, '', joinComments(sink))
     }
-    const angle = parseHeaderAngleAddr(cursor, sink)
+    const angle = parseHeaderAngleAddr(cursor, sink, opts)
     skipCFWS(cursor, sink)
     return finishMailbox(cursor, angle, phrase, joinComments(sink))
   }
-  const spec = parseHeaderAddrSpec(cursor, sink)
+  const spec = parseHeaderAddrSpec(cursor, sink, opts)
   skipCFWS(cursor, sink)
   return finishMailbox(cursor, spec, '', joinComments(sink))
 }
@@ -457,24 +473,33 @@ function hasGroupColonComing(cursor) {
   return false
 }
 
+// Used under `postel: true` to eat any `(CFWS ",")*` run — implements
+// RFC 5322 §4.4 obs-mbox-list / obs-addr-list null-entry tolerance.
+function skipNullEntries(cursor) {
+  while (true) {
+    skipCFWS(cursor, null)
+    if (cursor.peek() !== ',') break
+    cursor.consume(1)
+  }
+}
+
 function parseHeaderGroup(cursor, opts) {
   const phrase = parseHeaderPhrase(cursor, opts, null)
   skipCFWS(cursor, null)
   cursor.expect(':')
-  skipCFWS(cursor, null)
+  if (opts?.postel) skipNullEntries(cursor)
+  else skipCFWS(cursor, null)
   const members = []
   if (cursor.peek() !== ';') {
     members.push(parseHeaderMailbox(cursor, opts))
     while (true) {
       skipCFWS(cursor, null)
-      if (cursor.peek() === ',') {
-        cursor.consume(1)
-        skipCFWS(cursor, null)
-        if (cursor.peek() === ';' || cursor.done()) break // obs-mbox-list allows null entries
-        members.push(parseHeaderMailbox(cursor, opts))
-        continue
-      }
-      break
+      if (cursor.peek() !== ',') break
+      cursor.consume(1)
+      if (opts?.postel) skipNullEntries(cursor)
+      else skipCFWS(cursor, null)
+      if (cursor.peek() === ';' || cursor.done()) break // trailing comma already permitted in strict mode
+      members.push(parseHeaderMailbox(cursor, opts))
     }
   }
   skipCFWS(cursor, null)
@@ -487,21 +512,20 @@ function parseHeaderGroup(cursor, opts) {
 
 function parseHeaderAddressList(cursor, opts) {
   const items = []
+  if (opts?.postel) skipNullEntries(cursor)
   if (cursor.done()) return items
   items.push(parseHeaderAddress(cursor, opts))
   while (true) {
     // Between-address whitespace + comments are discarded — comments
     // here aren't attached to either neighbour.
     skipCFWS(cursor, null)
-    if (cursor.peek() === ',') {
-      cursor.consume(1)
-      // Leading CFWS for the next address is owned by that address's
-      // parseHeaderMailbox/Group, so don't eat it here.
-      if (cursor.done()) break
-      items.push(parseHeaderAddress(cursor, opts))
-      continue
-    }
-    break
+    if (cursor.peek() !== ',') break
+    cursor.consume(1)
+    if (opts?.postel) skipNullEntries(cursor)
+    // Leading CFWS for the next address is owned by that address's
+    // parseHeaderMailbox/Group, so don't eat it here.
+    if (cursor.done()) break
+    items.push(parseHeaderAddress(cursor, opts))
   }
   return items
 }
@@ -532,7 +556,7 @@ function parseHeaderString(input, opts) {
       result = [parseHeaderGroup(cursor, opts)]
       break
     case 'angle-addr':
-      result = [finishMailbox(cursor, parseHeaderAngleAddr(cursor, null), '', '')]
+      result = [finishMailbox(cursor, parseHeaderAngleAddr(cursor, null, opts), '', '')]
       break
     default:
       throw new Error(`Unknown startAt: ${startAt}`)

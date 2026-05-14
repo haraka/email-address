@@ -115,6 +115,13 @@ the pattern.)
   the existing building blocks.
 - Add a new option to the public entry points only if there's a clear
   use case. Default behaviour stays RFC-strict.
+- Relaxations of the strict RFC grammar — particularly RFC-5322 §4.4
+  obs-\* productions — go behind `postel: true`, not on by default. When
+  adding a new postel-mode relaxation, document it in `index.d.ts`
+  (the `EnvelopeParseOptions` / `HeaderParseOptions` JSDoc) and in the
+  README options table. Never relax control-character handling
+  (obs-NO-WS-CTL, obs-qp with control chars) — those would open
+  header-injection surface and are out of scope even with `postel`.
 
 ## Tests
 
