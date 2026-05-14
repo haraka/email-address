@@ -1,9 +1,11 @@
-// ESM entry point — canonical source for this module. The CJS mirror at
-// `./index.cjs` is auto-generated from this file by scripts/build-cjs.js
-// and refreshed by the pre-commit hook in .githooks/pre-commit, so do
-// not edit index.cjs by hand.
+'use strict'
 
-import { domainToASCII } from 'node:url'
+// AUTO-GENERATED from `./index.js` by scripts/build-cjs.js — do not edit
+// this file by hand. The pre-commit hook in .githooks/pre-commit
+// regenerates it whenever index.js is staged; `npm run build:cjs`
+// produces the same output on demand.
+
+const { domainToASCII } = require('node:url')
 
 // ---------------------------------------------------------------------------
 // Recursive-descent parser for RFC-5321 envelope addresses.
@@ -424,5 +426,5 @@ class Address {
   }
 }
 
-export { Address }
-export default { Address }
+module.exports = { Address }
+module.exports.default = module.exports

@@ -1,9 +1,7 @@
-'use strict'
+import test from 'node:test'
+import assert from 'node:assert/strict'
 
-const test = require('node:test')
-const assert = require('node:assert/strict')
-
-const { Address } = require('..')
+import { Address } from '../index.js'
 
 const expectReject = (input) => {
   assert.throws(

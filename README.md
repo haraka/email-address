@@ -1,10 +1,13 @@
 [![Build Status][ci-img]][ci-url]
 [![Coverage Status][cov-img]][cov-url]
 
-# email-address
+# @haraka/email-address
 
 Parser for RFC-821 / RFC-2821 / RFC-5321 envelope-format email addresses
 (Mailbox and Path).
+
+Dual-published as ESM (`import`) and CJS (`require`); pick whichever
+matches your codebase.
 
 This module handles the addresses that appear immediately after the SMTP
 verbs `MAIL FROM:` and `RCPT TO:`. For example:
@@ -29,13 +32,18 @@ To parse the addresses contained in message headers (`To:`, `From:`, `Cc:`,
 ## Installation
 
 ```sh
-npm install address-rfc2821
+npm install @haraka/email-address
 ```
 
 ## Usage
 
+The package ships ESM and CJS entry points side-by-side. Both expose an
+identical `Address` class.
+
+### ESM
+
 ```js
-const { Address } = require('address-rfc2821')
+import { Address } from '@haraka/email-address'
 
 const addr = new Address('<user@example.com>')
 addr.user // 'user'
@@ -43,8 +51,29 @@ addr.host // 'example.com'
 addr.format() // '<user@example.com>'
 ```
 
-For internationalized addresses, the parser preserves the original U-label
-form and lazily exposes the A-label (punycode) form:
+A default export is also available — useful for `import addr from
+'@haraka/email-address'` style imports in tooling that prefers it:
+
+```js
+import emailAddress from '@haraka/email-address'
+const addr = new emailAddress.Address('<user@example.com>')
+```
+
+### CJS
+
+```js
+const { Address } = require('@haraka/email-address')
+
+const addr = new Address('<user@example.com>')
+addr.format() // '<user@example.com>'
+```
+
+Both forms run end-to-end in [`examples/esm.mjs`](examples/esm.mjs) and
+[`examples/cjs.cjs`](examples/cjs.cjs); each one prints parsed fields
+for the same set of inputs and is invoked with plain `node`.
+
+For internationalized addresses, the parser preserves the original
+U-label form and lazily exposes the A-label (punycode) form:
 
 ```js
 const addr = new Address('<δοκιμή@παράδειγμα.gr>')
@@ -54,6 +83,17 @@ addr.host // 'xn--hxajbheg2az3al.gr'
 addr.is_utf8 // true
 addr.format(true) // '<δοκιμή@xn--hxajbheg2az3al.gr>'
 ```
+
+### Module layout
+
+The package's `exports` map resolves to the right file automatically:
+
+| Consumer style                                    | Resolves to  | Notes                                                   |
+| ------------------------------------------------- | ------------ | ------------------------------------------------------- |
+| `import { Address } from '@haraka/email-address'` | `index.js`   | Native ESM; the canonical source.                       |
+| `require('@haraka/email-address')`                | `index.cjs`  | CJS mirror |
+| TypeScript                                        | `index.d.ts` | Same types regardless of entry point  |
+
 
 ## Standards conformance
 
@@ -99,8 +139,8 @@ round-trip an address through `JSON.stringify` / `JSON.parse`.
 
 ### Options
 
-| Option   | Type      | Default | Effect                                                                                                                                                                                                                                                                                                                                                                                                                                |
-| -------- | --------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Option   | Type      | Default | Effect                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| -------- | --------- | ------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `postel` | `boolean` | `false` | Be liberal in what you accept. When `true`: (1) malformed `[IPv6:…]` bodies that fail the strict §4.1.3 grammar fall back to the General-address-literal path and are accepted as-is; (2) the 256-octet RFC 5321 §4.5.3.1.3 path limit is raised to the 998-octet SMTP text-line maximum (§4.5.3.1.6), so longer real-world reverse/forward paths still parse. This switch may govern other lenient behaviours in the future. |
 
 ### Properties

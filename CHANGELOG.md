@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   - much faster, especially on long addresses
   - zero dependencies
   - better RFC adherence, across the board
+- feat: dual-package layout, ESM (`index.js`) is canonical, CJS (`index.cjs`) is auto-generated
 - feat: a `postel: true` option to permit lax acceptance.
   - raises the 256-octet path limit to the 998-octet SMTP text-line maximum
   - relaxes IPv6 address parsing
@@ -19,7 +20,5 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - fix: detect non-ASCII at codepoint granularity (regex `u` flag), so
   supplementary-plane characters are no longer matched as two surrogates.
 
-
 [3.0.0]: https://github.com/haraka/email-address/releases/tag/v3.0.0
-
 [addr2821]: https://github.com/haraka/node-address-rfc2821

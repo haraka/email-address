@@ -8,10 +8,25 @@
   },
   "files": [
     "CHANGELOG.md",
-    "index.d.ts"
+    "examples/cjs.cjs",
+    "examples/esm.mjs",
+    "index.cjs",
+    "index.d.ts",
+    "index.js"
   ],
-  "main": "index.js",
-  "types": "index.d.ts",
+  "type": "module",
+  "main": "./index.cjs",
+  "module": "./index.js",
+  "types": "./index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./index.d.ts",
+      "import": "./index.js",
+      "require": "./index.cjs",
+      "default": "./index.cjs"
+    },
+    "./package.json": "./package.json"
+  },
   "homepage": "https://github.com/haraka/email-address",
   "keywords": [
     "email",
@@ -31,11 +46,15 @@
     "node": ">=22"
   },
   "scripts": {
-    "lint": "npx eslint index.js test/*.js",
-    "lint:fix": "npx eslint --fix index.js test/*.js",
-    "test": "node --test test/*.js",
-    "test:coverage": "node --test --experimental-test-coverage test/*.js",
-    "test:coverage:lcov": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info test/*.js",
+    "build:cjs": "node scripts/build-cjs.js",
+    "check:cjs": "node scripts/build-cjs.js --check",
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
+    "prepack": "node scripts/build-cjs.js",
+    "lint": "npx eslint index.js index.cjs scripts/*.js test/*.js test/*.cjs",
+    "lint:fix": "npx eslint --fix index.js index.cjs scripts/*.js test/*.js test/*.cjs",
+    "test": "node --test 'test/*.js' 'test/*.cjs'",
+    "test:coverage": "node --test --experimental-test-coverage 'test/*.js' 'test/*.cjs'",
+    "test:coverage:lcov": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info 'test/*.js' 'test/*.cjs'",
     "versions": "npx npm-dep-mgr check",
     "format": "npm run prettier:fix && npm run lint:fix",
     "prettier": "npx prettier . --check",
@@ -44,7 +63,7 @@
   },
   "repository": {
     "type": "git",
-    "url": "https://github.com/haraka/email-address.git"
+    "url": "git+https://github.com/haraka/email-address.git"
   },
   "devDependencies": {
     "@haraka/eslint-config": "^2.0.4"

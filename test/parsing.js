@@ -1,9 +1,7 @@
-'use strict'
+import { describe, it } from 'node:test'
+import assert from 'node:assert/strict'
 
-const { describe, it } = require('node:test')
-const assert = require('node:assert/strict')
-
-const { Address } = require('..')
+import { Address } from '../index.js'
 
 const expectOk = (input, want) => {
   const address = new Address(input)
