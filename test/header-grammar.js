@@ -171,6 +171,58 @@ describe('parseHeader — startAt options', () => {
   })
 })
 
+describe('parseHeader — control-character rejection (SMTP-injection guards)', () => {
+  it('rejects CRLF inside a comment', () => {
+    assert.throws(
+      () => parseHeader('Name (Comment\r\nX-Injected: evil) <user@example.com>'),
+      /control character in comment/,
+    )
+  })
+
+  it('rejects bare LF inside a comment', () => {
+    assert.throws(
+      () => parseHeader('alice@example.com (hello\nworld)'),
+      /control character in comment/,
+    )
+  })
+
+  it('rejects NUL inside a comment', () => {
+    assert.throws(
+      () => parseHeader('alice@example.com (hello\x00world)'),
+      /control character in comment/,
+    )
+  })
+
+  it('folds (does not pass through) CRLF inside a quoted-string phrase', () => {
+    // quoted-string folding is the parser's pre-existing FWS behaviour;
+    // ensure it still strips CR/LF so format() output is injection-free.
+    const [a] = parseHeader('"Display\r\nX-Inj: bad" <user@example.com>')
+    assert.equal(/[\r\n]/.test(a.phrase), false)
+    assert.equal(/[\r\n]/.test(a.format()), false)
+  })
+
+  it('format() output of any successfully parsed header is CR/LF-free', () => {
+    const corpus = [
+      'Alice <alice@example.com>',
+      'alice@example.com (Alice Smith)',
+      '"A, B" <ab@example.com>',
+      'Group: a@x, b@y;',
+    ]
+    const hasInjectable = (s) => {
+      for (let i = 0; i < s.length; i++) {
+        const c = s.charCodeAt(i)
+        if (c === 0x00 || c === 0x0a || c === 0x0d) return true
+      }
+      return false
+    }
+    for (const input of corpus) {
+      for (const a of parseHeader(input)) {
+        assert.equal(hasInjectable(a.format()), false, `format() of ${JSON.stringify(input)}`)
+      }
+    }
+  })
+})
+
 describe('Address — name()', () => {
   it('extracts a human name from the phrase', () => {
     const [a] = parseHeader('"Alice Smith" <alice@example.com>')

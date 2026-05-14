@@ -6,6 +6,34 @@
 // `npm run build:cjs` produces the same output on demand.
 
 const { NON_ASCII_RE, FORMAT_PHRASE_SAFE_RE } = require('./cursor.cjs')
+// Control characters (U+0000–U+001F and DEL U+007F) must not appear in any
+// serialized address field — they are an SMTP / header-injection vector.
+const hasCtrl = (s) => {
+  for (let i = 0; i < s.length; i++) {
+    const c = s.charCodeAt(i)
+    if (c <= 0x1f || c === 0x7f) return true
+  }
+  return false
+}
+
+// Explicit allowlist for plain-object rehydration so that inherited
+// enumerable properties (including __proto__) are never copied onto the
+// instance.  Only fields this library writes are included.
+const REHYDRATE_KEYS = [
+  'user',
+  'host',
+  'original',
+  'original_host',
+  'is_utf8',
+  'phrase',
+  'comment',
+  'group',
+  '_kind',
+]
+
+// Subset of REHYDRATE_KEYS whose values flow into format() output and
+// therefore must never contain control characters.
+const CTRL_CHECK_KEYS = ['user', 'host', 'original_host', 'phrase', 'comment']
 const { toASCIIDomain } = require('./literals.cjs')
 const { parseEnvelopeAddress } = require('./envelope.cjs')
 const { extractName } = require('./name-utils.cjs')
@@ -35,9 +63,14 @@ class Address {
     this.group = null
 
     if (typeof user === 'object' && user !== null && user.original) {
-      // Construct from a JSON-rehydrated object
-      for (const k in user) {
-        this[k] = user[k]
+      // Construct from a JSON-rehydrated object — copy only known own fields.
+      for (const k of REHYDRATE_KEYS) {
+        if (Object.hasOwn(user, k)) this[k] = user[k]
+      }
+      for (const k of CTRL_CHECK_KEYS) {
+        if (typeof this[k] === 'string' && hasCtrl(this[k])) {
+          throw new Error(`Address field "${k}" must not contain control characters`)
+        }
       }
       return this
     }
@@ -56,6 +89,9 @@ class Address {
       this.original = user
       this.parse(user)
     } else {
+      if (hasCtrl(user) || hasCtrl(host)) {
+        throw new Error('Address parts must not contain control characters')
+      }
       this.original = `${user}@${host}`
       this.user = user
       this.original_host = host
@@ -182,5 +218,5 @@ function formatComment(comment) {
   return `(${comment.trim()})`
 }
 
-module.exports = { Address, Group }
+module.exports = { Address, Group, hasCtrl }
 module.exports.default = module.exports

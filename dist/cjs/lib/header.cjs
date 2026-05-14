@@ -15,7 +15,7 @@ const {
   FWS_RE,
 } = require('./cursor.cjs')
 const { parseAddressLiteral, toASCIIDomain } = require('./literals.cjs')
-const { Address, Group } = require('./address.cjs')
+const { Address, Group, hasCtrl } = require('./address.cjs')
 // Skip *(CFWS): folding white space and comments. If a `sink` array is
 // provided, captured comment bodies (without outer parens) are pushed
 // into it so callers can later attach them to a mailbox-level Address.
@@ -58,6 +58,12 @@ function parseHeaderComment(cursor) {
       if (depth === 0) {
         const body = cursor.input.slice(start, cursor.pos)
         cursor.consume(1)
+        // Reject unfolded CR/LF/NUL and other control bytes — they are an
+        // SMTP / header-injection vector if the formatted output is later
+        // emitted into a header line.
+        if (hasCtrl(body)) {
+          throw parseError('control character in comment', cursor)
+        }
         return body.trim()
       }
       cursor.consume(1)
@@ -407,6 +413,21 @@ function finishMailbox(_cursor, spec, phrase, comment) {
 }
 
 function _newHeaderAddress({ user, host, original_host, phrase, comment, is_utf8 }) {
+  // Defense-in-depth: every field that flows into format() must be free of
+  // control characters. Upstream productions already reject them, but a
+  // single chokepoint here guarantees no future caller can build a header
+  // Address that would emit an SMTP-injection-capable string.
+  for (const [k, v] of [
+    ['user', user],
+    ['host', host],
+    ['original_host', original_host],
+    ['phrase', phrase],
+    ['comment', comment],
+  ]) {
+    if (typeof v === 'string' && hasCtrl(v)) {
+      throw new Error(`Address field "${k}" must not contain control characters`)
+    }
+  }
   const a = Object.create(Address.prototype)
   a.user = user
   a.host = host

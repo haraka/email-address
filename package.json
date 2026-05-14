@@ -1,6 +1,6 @@
 {
   "name": "@haraka/email-address",
-  "version": "3.1.0",
+  "version": "3.1.1",
   "description": "RFC-5321 envelope and RFC-5322 header email-address parser",
   "author": {
     "name": "The Haraka Team",
@@ -8,6 +8,7 @@
   },
   "files": [
     "CHANGELOG.md",
+    "LICENSE",
     "dist/cjs/index.cjs",
     "dist/cjs/lib/*.cjs",
     "examples/cjs.cjs",
