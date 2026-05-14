@@ -3,7 +3,7 @@
 
 # @haraka/email-address
 
-One parser for every email-address shape: SMTP envelope (RFC 5321), email message header (RFC 5322 / 6532), and bare email validation. Zero runtime dependencies. Highly RFC conformant with a lenient [postel](https://en.wikipedia.org/wiki/Robustness_principle) mode for real-world inputs. O(n) performance, see [PERFORMANCE][PERFORMANCE.md].
+One parser for every email-address shape: SMTP envelope (RFC 5321), email message header (RFC 5322 / 6532), and bare email validation. Zero runtime dependencies. Highly RFC conformant with a lenient [postel](https://en.wikipedia.org/wiki/Robustness_principle) mode for real-world inputs. O(n) performance, see [PERFORMANCE](PERFORMANCE.md).
 
 Dual-published as ESM (`import`) and CJS (`require`); pick to match your codebase.
 
