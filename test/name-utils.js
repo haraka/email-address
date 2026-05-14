@@ -50,3 +50,56 @@ describe('extractName', () => {
     assert.equal(extractName('123 456 7890', ''), '')
   })
 })
+
+describe('extractName — ReDoS resistance', () => {
+  // These inputs exercise the regex shapes flagged by CodeQL: a lazy
+  // `.*?` encoded-word matcher, a bracket-strip regex with no closer,
+  // and the nested-quantifier first.last-local extractor. Each ran in
+  // O(n²) before the rewrite; the deterministic helpers keep them
+  // linear. Generous (100ms) thresholds keep CI quiet on slow runners
+  // while still catching a real polynomial regression.
+  const BUDGET_MS = 100
+  const REPS = 50_000
+
+  function timed(fn) {
+    const start = process.hrtime.bigint()
+    fn()
+    return Number(process.hrtime.bigint() - start) / 1e6
+  }
+
+  it('encoded-word check stays linear on pathological "=?a=?a=?…" input', () => {
+    const input = '=?' + 'a=?'.repeat(REPS)
+    const ms = timed(() => extractName(input, ''))
+    assert.ok(ms < BUDGET_MS, `encoded-word check on ${input.length} chars took ${ms.toFixed(1)}ms`)
+  })
+
+  it('comment strip stays linear on unbalanced "(((…" input', () => {
+    const input = '('.repeat(REPS)
+    const ms = timed(() => extractName(input, ''))
+    assert.ok(ms < BUDGET_MS, `comment strip on ${input.length} chars took ${ms.toFixed(1)}ms`)
+  })
+
+  it('bracket strip stays linear on unbalanced "[[[…" input', () => {
+    const input = '['.repeat(REPS)
+    const ms = timed(() => extractName(input, ''))
+    assert.ok(ms < BUDGET_MS, `bracket strip on ${input.length} chars took ${ms.toFixed(1)}ms`)
+  })
+
+  it('local-part fallback stays linear on "$$$$…@…" addresses', () => {
+    const address = '$'.repeat(REPS) + '@example.com'
+    const ms = timed(() => extractName('', address))
+    assert.ok(
+      ms < BUDGET_MS,
+      `local-part fallback on ${address.length} chars took ${ms.toFixed(1)}ms`,
+    )
+  })
+
+  it('local-part fallback stays linear on "$.$.$.…@…" addresses', () => {
+    const address = '$.'.repeat(REPS) + '@example.com'
+    const ms = timed(() => extractName('', address))
+    assert.ok(
+      ms < BUDGET_MS,
+      `dotted local-part fallback on ${address.length} chars took ${ms.toFixed(1)}ms`,
+    )
+  })
+})
