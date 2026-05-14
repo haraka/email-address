@@ -218,5 +218,5 @@ function formatComment(comment) {
   return `(${comment.trim()})`
 }
 
-module.exports = { Address, Group }
+module.exports = { Address, Group, hasCtrl }
 module.exports.default = module.exports
