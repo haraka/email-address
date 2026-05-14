@@ -5,9 +5,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### Unreleased
 
 ### [3.0.1] - 2026-05-13
-- remove .release
-- converted to ESM
-- initial commit
+
+- convert to ESM
 
 ### [3.0.0] - 2026-06-01
 
@@ -25,6 +24,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - fix: detect non-ASCII at codepoint granularity (regex `u` flag), so
   supplementary-plane characters are no longer matched as two surrogates.
 
-[3.0.0]: https://github.com/haraka/email-address/releases/tag/v3.0.0
 [addr2821]: https://github.com/haraka/node-address-rfc2821
+
+[3.0.0]: https://github.com/haraka/email-address/releases/tag/v3.0.0
 [3.0.1]: https://github.com/haraka/email-address/releases/tag/v3.0.1
+
