@@ -80,31 +80,25 @@ describe('Address formatting methods', () => {
     assert.equal(address.format(), '<u@δοκιμή.gr>')
   })
 
-  it('address() returns user@host without brackets', () => {
+  it('.address returns user@host without brackets', () => {
     const address = new Address('<u@example.com>')
-    assert.equal(address.address(), 'u@example.com')
+    assert.equal(address.address, 'u@example.com')
   })
 
-  it('address() returns just the user when there is no host', () => {
+  it('.address returns just the user when there is no host', () => {
     const address = new Address('postmaster')
-    assert.equal(address.address(), 'postmaster')
+    assert.equal(address.address, 'postmaster')
   })
 
-  it('address() returns an empty string for the null path', () => {
-    assert.equal(new Address('<>').address(), '')
+  it('.address returns an empty string for the null path', () => {
+    assert.equal(new Address('<>').address, '')
   })
 
-  it('address() can re-parse the instance in place', () => {
-    const address = new Address('<a@b>')
-    address.address('<c@d>')
-    assert.equal(address.user, 'c')
-    assert.equal(address.host, 'd')
-  })
-
-  it('address() use_punycode controls host rendering', () => {
+  it('.address preserves the original-cased host for IDN', () => {
     const address = new Address('<u@δοκιμή.gr>')
-    assert.equal(address.address(null, false), 'u@δοκιμή.gr')
-    assert.match(address.address(null, true), /^u@xn--/)
+    assert.equal(address.address, 'u@δοκιμή.gr')
+    // The punycoded host is exposed separately on `.host`.
+    assert.match(address.host, /^xn--/)
   })
 
   it('toString() matches format()', () => {

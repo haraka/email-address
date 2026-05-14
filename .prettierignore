@@ -1,1 +1,5 @@
 .release/
+
+# Auto-generated CJS mirrors — produced by scripts/build-cjs.js and
+# kept byte-identical to its output so `npm run check:cjs` stays clean.
+dist/

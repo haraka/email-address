@@ -5,7 +5,7 @@
 
 'use strict'
 
-const { Address } = require('@haraka/email-address')
+const { Address, Group, parseEnvelope, parseHeader } = require('@haraka/email-address')
 
 const examples = [
   '<user@example.com>',
@@ -36,3 +36,25 @@ console.log('postel mode accepts malformed IPv6:', lax.format())
 // `format(true)` renders the punycode (A-label) host.
 const idn = new Address('<u@δοκιμή.gr>')
 console.log('punycode form:', idn.format(true))
+
+// ---------------------------------------------------------------------
+// Header parsing (RFC 5322) — `From:`, `To:`, `Cc:` style values.
+// ---------------------------------------------------------------------
+
+console.log('\n--- parseHeader ---')
+
+const headerValue =
+  '"Alice Smith" <alice@example.com>, ' +
+  'bob@example.com (Bob), ' +
+  'Friends: c@example.com, d@example.com;'
+
+for (const entry of parseHeader(headerValue)) {
+  if (entry instanceof Group) {
+    console.log('group:', entry.phrase, '(' + entry.addresses.length + ' members)')
+    for (const m of entry.addresses) console.log('  -', m.address)
+  } else {
+    console.log('addr :', entry.address, '/ name:', entry.name())
+  }
+}
+
+console.log('parseEnvelope:', parseEnvelope('<u@example.com>').format())

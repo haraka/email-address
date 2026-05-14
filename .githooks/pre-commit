@@ -1,11 +1,15 @@
 #!/bin/sh
-# Regenerate index.cjs from index.js when index.js is part of the
-# staged change set, and add the result to the commit. Set up by the
+# Regenerate every <src>.cjs mirror whenever any ESM source (index.js
+# or anything under lib/) is part of the staged change set, and add
+# the result to the commit. The CJS tree lives under dist/cjs/. Set up by the
 # package's `prepare` script via `git config core.hooksPath .githooks`.
 
 set -e
 
-if git diff --cached --name-only --diff-filter=ACMR | grep -qx 'index.js'; then
-  node scripts/build-cjs.js
-  git add index.cjs
-fi
+staged=$(git diff --cached --name-only --diff-filter=ACMR)
+case "$staged" in
+  *index.js*|*lib/*.js*)
+    node scripts/build-cjs.js
+    git add dist/cjs/index.cjs dist/cjs/lib/*.cjs
+    ;;
+esac

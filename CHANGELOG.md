@@ -4,7 +4,16 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
-### [3.0.1] - 2026-05-13
+### [3.1.0] - 2026-05-14
+
+- feat: new RFC-5322 recursive-descent parser, O(1) performance, dependency free
+  - test suite imported from [`address-rfc2822`][addr2822]
+- feat: new top-level functions `parseEnvelope`, `parseHeader`, `parseFrom`, `parseSender`, `parseReplyTo`
+- feat: new `Group` class for RFC-5322 group syntax (`Friends: a@x, b@x;`)
+- feat: `Address` gains `phrase`, `comment`, `address`, and `group` fields.
+- feat: name-handling utilities ported from `address-rfc2822`
+
+### 3.0.1 - 2026-05-13
 
 - convert to ESM
 
@@ -21,9 +30,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
   - relaxes IPv6 address parsing
 - feat: set `is_utf8` when the local-part or the domain contains non-ASCII
 - feat: improved IDN encoding using `node:url`'s `domainToASCII` (UTS-46)
-- fix: detect non-ASCII at codepoint granularity (regex `u` flag), so
-  supplementary-plane characters are no longer matched as two surrogates.
+- fix: detect non-ASCII at codepoint granularity (regex `u` flag)
 
 [addr2821]: https://github.com/haraka/node-address-rfc2821
+[addr2822]: https://github.com/haraka/node-address-rfc2822
 [3.0.0]: https://github.com/haraka/email-address/releases/tag/v3.0.0
-[3.0.1]: https://github.com/haraka/email-address/releases/tag/v3.0.1
+[3.1.0]: https://github.com/haraka/email-address/releases/tag/v3.1.0
