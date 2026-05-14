@@ -1,0 +1,58 @@
+{
+  "name": "@haraka/email-address",
+  "version": "3.0.0",
+  "description": "Email address parser",
+  "author": {
+    "name": "The Haraka Team",
+    "url": "http://haraka.github.io"
+  },
+  "files": [
+    "CHANGELOG.md",
+    "index.d.ts"
+  ],
+  "main": "index.js",
+  "types": "index.d.ts",
+  "homepage": "https://github.com/haraka/email-address",
+  "keywords": [
+    "email",
+    "envelope",
+    "address",
+    "rfc821",
+    "rfc2821",
+    "rfc5321",
+    "RFC-5321",
+    "mail",
+    "from"
+  ],
+  "bugs": {
+    "url": "https://github.com/haraka/email-address/issues"
+  },
+  "engines": {
+    "node": ">=22"
+  },
+  "scripts": {
+    "lint": "npx eslint index.js test/*.js",
+    "lint:fix": "npx eslint --fix index.js test/*.js",
+    "test": "node --test test/*.js",
+    "test:coverage": "node --test --experimental-test-coverage test/*.js",
+    "test:coverage:lcov": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info test/*.js",
+    "versions": "npx npm-dep-mgr check",
+    "format": "npm run prettier:fix && npm run lint:fix",
+    "prettier": "npx prettier . --check",
+    "prettier:fix": "npx prettier . --write --log-level=warn",
+    "versions:fix": "npx npm-dep-mgr update"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/haraka/email-address.git"
+  },
+  "devDependencies": {
+    "@haraka/eslint-config": "^2.0.4"
+  },
+  "license": "MIT",
+  "prettier": {
+    "printWidth": 100,
+    "singleQuote": true,
+    "semi": false
+  }
+}
