@@ -220,7 +220,14 @@ function runBenchmarks() {
       const eaResult = ea.isValid(input)
       const hapiResult = hapi.isEmailValid(input)
 
-      validationResults.push({ label, input, emailAddress: eaOps, hapi: hapiOps, eaResult, hapiResult })
+      validationResults.push({
+        label,
+        input,
+        emailAddress: eaOps,
+        hapi: hapiOps,
+        eaResult,
+        hapiResult,
+      })
       console.log(
         `${fmtOps(eaOps).padStart(16)} ${fmtOps(hapiOps).padStart(16)} ${mult.padStart(6)}`,
       )
@@ -400,4 +407,11 @@ if (require.main === module) {
   console.log(`✓ Results written to ${outPath}`)
 }
 
-module.exports = { runBenchmarks, generateMarkdown, ENVELOPE_CASES, HEADER_CASES, VALIDATION_CASES, measure }
+module.exports = {
+  runBenchmarks,
+  generateMarkdown,
+  ENVELOPE_CASES,
+  HEADER_CASES,
+  VALIDATION_CASES,
+  measure,
+}
