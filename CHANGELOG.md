@@ -4,6 +4,11 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [3.0.1] - 2026-05-13
+- remove .release
+- converted to ESM
+- initial commit
+
 ### [3.0.0] - 2026-06-01
 
 - feat: rewrite of [address-rfc2821][addr2821] as a dependency-free O(1) recursive descent parser.
@@ -22,3 +27,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 [3.0.0]: https://github.com/haraka/email-address/releases/tag/v3.0.0
 [addr2821]: https://github.com/haraka/node-address-rfc2821
+[3.0.1]: https://github.com/haraka/email-address/releases/tag/v3.0.1

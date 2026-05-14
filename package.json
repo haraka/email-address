@@ -1,6 +1,6 @@
 {
   "name": "@haraka/email-address",
-  "version": "3.0.0",
+  "version": "3.0.1",
   "description": "Email address parser",
   "author": {
     "name": "The Haraka Team",
