@@ -88,12 +88,11 @@ addr.format(true) // '<δοκιμή@xn--hxajbheg2az3al.gr>'
 
 The package's `exports` map resolves to the right file automatically:
 
-| Consumer style                                    | Resolves to  | Notes                                                   |
-| ------------------------------------------------- | ------------ | ------------------------------------------------------- |
-| `import { Address } from '@haraka/email-address'` | `index.js`   | Native ESM; the canonical source.                       |
-| `require('@haraka/email-address')`                | `index.cjs`  | CJS mirror |
-| TypeScript                                        | `index.d.ts` | Same types regardless of entry point  |
-
+| Consumer style                                    | Resolves to  | Notes                                |
+| ------------------------------------------------- | ------------ | ------------------------------------ |
+| `import { Address } from '@haraka/email-address'` | `index.js`   | Native ESM; the canonical source.    |
+| `require('@haraka/email-address')`                | `index.cjs`  | CJS mirror                           |
+| TypeScript                                        | `index.d.ts` | Same types regardless of entry point |
 
 ## Standards conformance
 
