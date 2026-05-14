@@ -102,4 +102,20 @@ describe('extractName — ReDoS resistance', () => {
       `dotted local-part fallback on ${address.length} chars took ${ms.toFixed(1)}ms`,
     )
   })
+
+  it('Last-First reorder stays linear on "!,!,!,!,…" input', () => {
+    // Used to be `/^([^\s]+) ?, ?(.*)$/` where `[^\s]+` overlaps with
+    // the literal `,`. Deterministic indexOf swap keeps it linear.
+    const input = '!,'.repeat(REPS) + '!'
+    const ms = timed(() => extractName(input, ''))
+    assert.ok(ms < BUDGET_MS, `last-first reorder on ${input.length} chars took ${ms.toFixed(1)}ms`)
+  })
+
+  it('edge-trim stays linear on long whitespace-only input', () => {
+    // Replaces `/(^[\s'"]+|[\s'"]+$)/g` — flagged for the greedy
+    // class with the global flag.
+    const input = '\t'.repeat(REPS)
+    const ms = timed(() => extractName(input, ''))
+    assert.ok(ms < BUDGET_MS, `edge-trim on ${input.length} chars took ${ms.toFixed(1)}ms`)
+  })
 })

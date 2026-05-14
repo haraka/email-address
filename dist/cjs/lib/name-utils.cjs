@@ -52,6 +52,36 @@ function containsEncodedWord(s) {
   return s.indexOf('?=', start + 2) !== -1
 }
 
+// Reorder a "Last, First" string to "First Last". The original
+// `/^([^\s]+) ?, ?(.*)$/` could ping-pong its `[^\s]+` and the
+// literal `,` (both match the comma char), so CodeQL flagged it. A
+// single indexOf + suffix check is linear and unambiguous.
+function reorderLastFirst(s) {
+  const commaIdx = s.indexOf(',')
+  if (commaIdx <= 0) return s
+  let before = s.slice(0, commaIdx)
+  if (before.endsWith(' ')) before = before.slice(0, -1)
+  // The "Last, First" pattern requires the first half to be a single
+  // non-whitespace token. `/\s/.test(...)` is a single-char class
+  // (no quantifier) so it scans linearly.
+  if (!before.length || /\s/.test(before)) return s
+  let after = s.slice(commaIdx + 1)
+  if (after.startsWith(' ')) after = after.slice(1)
+  return `${after} ${before}`
+}
+
+// Strip every leading/trailing char in `chars` from `s`. Replaces the
+// alternation regex `/(^[\s'"]+|[\s'"]+$)/g`; deterministic scan from
+// both ends keeps it linear (CodeQL: Polynomial regex).
+function stripEdges(s) {
+  const isEdgeChar = (ch) => /[\s'"]/.test(ch)
+  let start = 0
+  while (start < s.length && isEdgeChar(s[start])) start += 1
+  let end = s.length
+  while (end > start && isEdgeChar(s[end - 1])) end -= 1
+  return start === 0 && end === s.length ? s : s.slice(start, end)
+}
+
 // Test whether `localPart` matches `^chunk(sep chunk)+$`, where chunk
 // is 1+ chars from `[^%.@_]` and sep is one of `.` or `_`. An
 // imperative scan keeps the test linear regardless of input shape
@@ -100,14 +130,13 @@ function extractName(phrase, address = '') {
 
   if (name.startsWith('"') && name.endsWith('"')) name = name.slice(1, -1)
 
-  name = name
-    .replace(/^([^\s]+) ?, ?(.*)$/, '$2 $1') // "Last, First" → "First Last"
-    .replace(/,.*/, '')
+  name = reorderLastFirst(name) // "Last, First" → "First Last"
+  const cIdx = name.indexOf(',')
+  if (cIdx !== -1) name = name.slice(0, cIdx) // drop everything from the first comma
 
   if (isAllUpper(name) || isAllLower(name)) name = nameCase(name)
 
-  name = stripBracketed(name, '[', ']')
-    .replace(/(^[\s'"]+|[\s'"]+$)/g, '') // trim quotes/spaces again
+  name = stripEdges(stripBracketed(name, '[', ']')) // trim quotes/spaces, drop [brackets]
     .replace(/\s{2,}/g, ' ')
     .trim()
 

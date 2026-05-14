@@ -10,9 +10,9 @@
 
 | Package                     | Domain     | Implementation                        |   Avg speedup |
 | --------------------------- | ---------- | ------------------------------------- | ------------: |
-| [address-rfc2821][addr2821] | Envelope   | [nearley][nearley] grammar (PEG-like) | ~44.3× faster |
+| [address-rfc2821][addr2821] | Envelope   | [nearley][nearley] grammar (PEG-like) | ~44.2× faster |
 | [smtp-address-parser][sap]  | Envelope   | [nearley][nearley] grammar (PEG-like) | ~50.0× faster |
-| [address-rfc2822][addr2822] | Header     | [email-addresses][eaddr] PEG parser   | ~20.5× faster |
+| [address-rfc2822][addr2822] | Header     | [email-addresses][eaddr] PEG parser   | ~20.7× faster |
 | [nodemailer][nodemailer]    | Header     | hand-rolled tokeniser                 |  ~1.3× faster |
 | [@hapi/address][hapi-a]     | Validation | hand-rolled regex + string split      |  ~5.5× faster |
 
@@ -23,12 +23,12 @@ parser. The nearley-compiled grammars carry a significant per-parse overhead fro
 
 | Description        | Input                                                 | email-address<br>(ops/s) | address-rfc2822<br>(ops/s) | nodemailer<br>(ops/s) |
 | ------------------ | ----------------------------------------------------- | -----------------------: | -------------------------: | --------------------: |
-| bare address       | `alice@example.com`                                   |                2,030,553 |                    111,377 |             1,672,318 |
-| display name       | `"Alice Smith" <alice@example.com>`                   |                1,409,755 |                     59,767 |             1,267,304 |
-| addr + comment     | `Alice Smith <alice@example.com> (via webmail)`       |                1,046,365 |                     54,140 |               839,105 |
-| multiple addresses | `alice@example.com, bob@example.com, carol@example.…` |                  632,260 |                     35,833 |               492,652 |
-| group syntax       | `Friends: alice@example.com, bob@example.com;`        |                  766,134 |                     33,863 |               424,193 |
-| complex header     | `"Alice Smith" <alice@example.com>, "Bob Jones" <bo…` |                  502,414 |                     23,444 |               420,862 |
+| bare address       | `alice@example.com`                                   |                2,083,663 |                    110,064 |             1,670,244 |
+| display name       | `"Alice Smith" <alice@example.com>`                   |                1,364,553 |                     59,261 |             1,238,458 |
+| addr + comment     | `Alice Smith <alice@example.com> (via webmail)`       |                1,033,115 |                     53,586 |               835,684 |
+| multiple addresses | `alice@example.com, bob@example.com, carol@example.…` |                  640,657 |                     35,594 |               488,982 |
+| group syntax       | `Friends: alice@example.com, bob@example.com;`        |                  777,213 |                     34,252 |               424,400 |
+| complex header     | `"Alice Smith" <alice@example.com>, "Bob Jones" <bo…` |                  511,202 |                     23,189 |               426,371 |
 
 ## Envelope Parsing
 
@@ -37,11 +37,11 @@ parser. The nearley-compiled grammars carry a significant per-parse overhead fro
 
 | Description       | Input                       | email-address<br>(ops/s) | address-rfc2821<br>(ops/s) | smtp-address-parser<br>(ops/s) |
 | ----------------- | --------------------------- | -----------------------: | -------------------------: | -----------------------------: |
-| simple mailbox    | `user@example.com`          |                4,186,918 |                     63,200 |                         51,690 |
-| quoted local-part | `"quoted user"@example.com` |                3,774,606 |                     47,461 |                         43,255 |
-| IPv4 literal      | `u@[1.2.3.4]`               |                5,360,852 |                    177,787 |                        160,782 |
-| IPv6 literal      | `u@[IPv6:2001:db8::1]`      |                1,927,578 |                     65,391 |                         63,855 |
-| Unicode / EAI     | `δοκιμή@παράδειγμα.gr`      |                  754,063 |                     47,273 |                         41,800 |
+| simple mailbox    | `user@example.com`          |                4,196,494 |                     63,235 |                         51,890 |
+| quoted local-part | `"quoted user"@example.com` |                3,661,707 |                     47,654 |                         43,119 |
+| IPv4 literal      | `u@[1.2.3.4]`               |                5,370,089 |                    172,326 |                        155,601 |
+| IPv6 literal      | `u@[IPv6:2001:db8::1]`      |                2,028,816 |                     64,909 |                         64,097 |
+| Unicode / EAI     | `δοκιμή@παράδειγμα.gr`      |                  735,914 |                     47,191 |                         41,159 |
 
 ## Validation
 
@@ -50,11 +50,11 @@ _@hapi/address_ targets web-form validation and rejects those forms.
 
 | Description       | Input                       | email-address<br>(ops/s) | @hapi/address<br>(ops/s) |
 | ----------------- | --------------------------- | -----------------------: | -----------------------: |
-| simple mailbox    | `user@example.com`          |                3,558,402 |                1,736,320 |
-| quoted local-part | `"quoted user"@example.com` |                3,288,753 |                       ❌ |
-| IPv4 literal      | `u@[1.2.3.4]`               |                4,430,104 |                       ❌ |
-| Unicode / EAI     | `δοκιμή@παράδειγμα.gr`      |                  696,498 |                  257,786 |
-| invalid address   | `notanemail`                |                  215,208 |               18,910,741 |
+| simple mailbox    | `user@example.com`          |                3,492,433 |                1,705,415 |
+| quoted local-part | `"quoted user"@example.com` |                3,287,996 |                       ❌ |
+| IPv4 literal      | `u@[1.2.3.4]`               |                4,427,195 |                       ❌ |
+| Unicode / EAI     | `δοκιμή@παράδειγμα.gr`      |                  691,766 |                  254,975 |
+| invalid address   | `notanemail`                |                  214,099 |               18,594,273 |
 
 ## Environment
 
