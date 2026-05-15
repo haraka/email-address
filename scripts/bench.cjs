@@ -333,7 +333,7 @@ ${validationRows()}
 
 1. [Envelope parsing](#envelope-parsing) of SMTP envelope addresses ([RFC 5321][rfc5321]).
 2. [Header parsing](#header-parsing) of Email headers ([RFC 5322][rfc5322]).
-3. [Validation](#validation) of bare email addresses.
+3. [Validation](#validation) of plain email addresses.
 
 ## Summary
 
@@ -352,6 +352,8 @@ ${summaryHapiRow}
 | Description | Input | email-address<br>(ops/s) | address-rfc2822<br>(ops/s) | nodemailer<br>(ops/s) |
 |-------------|-------|-------------------------:|---------------------------:|----------------------:|
 ${headerRows()}
+
+- _address-rfc2822_ is a thin wrapper around [_email-addresses_][eaddr], they are equivalent for benchmarking purposes.
 
 ## Envelope Parsing
 

@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### [3.1.2] - 2026-05-14
 
+- doc(README): fix badge URLs
+- doc(PERF): note that perf of email-addresses is same as address-rfc2822
 
 ### [3.1.1] - 2026-05-14
 
