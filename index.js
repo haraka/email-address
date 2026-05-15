@@ -19,6 +19,8 @@ import { Address, Group } from './lib/address.js'
 import { parseHeaderString } from './lib/header.js'
 import { parseAddress, isValid } from './lib/validator.js'
 import { extractName, isAllLower, isAllUpper, nameCase } from './lib/name-utils.js'
+// SUNSET 2027: opt-in legacy-contract wrapper — see lib/legacy.js.
+import { asLegacy, unwrapLegacy } from './lib/legacy.js'
 
 // RFC-5321 single envelope address.
 function parseEnvelope(input, opts) {
@@ -45,11 +47,17 @@ function parseReplyTo(input) {
   return parseHeader(input, { startAt: 'reply-to' })
 }
 
+// SUNSET 2027: `parse` is the address-rfc2822 spelling of `parseHeader`.
+// Kept so not-yet-migrated callers (`addrparser.parse(headerValue)`)
+// keep working. Remove in 2027 once consumers use `parseHeader`.
+const parse = parseHeader
+
 export {
   Address,
   Group,
   parseEnvelope,
   parseHeader,
+  parse,
   parseFrom,
   parseSender,
   parseReplyTo,
@@ -59,12 +67,15 @@ export {
   isAllLower,
   isAllUpper,
   nameCase,
+  asLegacy,
+  unwrapLegacy,
 }
 export default {
   Address,
   Group,
   parseEnvelope,
   parseHeader,
+  parse,
   parseFrom,
   parseSender,
   parseReplyTo,
@@ -74,4 +85,6 @@ export default {
   isAllLower,
   isAllUpper,
   nameCase,
+  asLegacy,
+  unwrapLegacy,
 }

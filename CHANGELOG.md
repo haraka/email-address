@@ -4,6 +4,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [3.1.3] - 2026-05-14
+
+- feat: add compat aliases to match address-rfc2822 (sunset 2027)
+  - `parse` exported as an alias of `parseHeader`
+  - `asLegacy(addr)` — Proxy whose `address`/`host` read as the
+    string AND are callable (`addr.host()`), for not-yet-migrated
+    callers. Only the wrapping boundary (e.g. Haraka core) opts in.
+
 ### [3.1.2] - 2026-05-14
 
 - doc(README): fix badge URLs
@@ -50,3 +58,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 [3.1.0]: https://github.com/haraka/email-address/releases/tag/v3.1.0
 [3.1.1]: https://github.com/haraka/email-address/releases/tag/v3.1.1
 [3.1.2]: https://github.com/haraka/email-address/releases/tag/v3.1.2
+[3.1.3]: https://github.com/haraka/email-address/releases/tag/v3.1.3

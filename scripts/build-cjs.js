@@ -44,6 +44,7 @@ const SOURCES = [
   { esm: 'lib/address.js', cjs: 'dist/cjs/lib/address.cjs' },
   { esm: 'lib/validator.js', cjs: 'dist/cjs/lib/validator.cjs' },
   { esm: 'lib/name-utils.js', cjs: 'dist/cjs/lib/name-utils.cjs' },
+  { esm: 'lib/legacy.js', cjs: 'dist/cjs/lib/legacy.cjs' },
 ]
 
 const CJS_HEADER = `'use strict'
