@@ -4,6 +4,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [3.1.2] - 2026-05-14
+
+
 ### [3.1.1] - 2026-05-14
 
 - fix: strengthen control character rejection
@@ -13,7 +16,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### [3.1.0] - 2026-05-14
 
-- feat: new RFC-5322 recursive-descent parser, O(1) performance, dependency free
+- feat: new RFC-5322 recursive-descent parser, O(n) performance, dependency free
   - test suite imported from [`address-rfc2822`][addr2822]
 - feat: new top-level functions `parseEnvelope`, `parseHeader`, `parseFrom`, `parseSender`, `parseReplyTo`
 - feat: new `Group` class for RFC-5322 group syntax (`Friends: a@x, b@x;`)
@@ -26,7 +29,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### [3.0.0] - 2026-06-01
 
-- feat: rewrite of [address-rfc2821][addr2821] as a dependency-free O(1) recursive descent parser.
+- feat: rewrite of [address-rfc2821][addr2821] as a dependency-free O(n) recursive descent parser.
   - inherited test suite, now with 100% code coverage.
   - much faster, especially on long addresses
   - zero dependencies
@@ -44,3 +47,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 [3.0.0]: https://github.com/haraka/email-address/releases/tag/v3.0.0
 [3.1.0]: https://github.com/haraka/email-address/releases/tag/v3.1.0
 [3.1.1]: https://github.com/haraka/email-address/releases/tag/v3.1.1
+[3.1.2]: https://github.com/haraka/email-address/releases/tag/v3.1.2
