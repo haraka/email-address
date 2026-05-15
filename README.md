@@ -3,9 +3,9 @@
 
 # @haraka/email-address
 
-One parser for every email-address shape: SMTP envelope (RFC 5321), email message header (RFC 5322 / 6532), and bare email validation. Zero runtime dependencies. Highly RFC conformant with a lenient [postel](https://en.wikipedia.org/wiki/Robustness_principle) mode for real-world inputs. O(n) performance, see [PERFORMANCE](PERFORMANCE.md).
+A high-performance zero-dependency email address parser and validator for email addresses in **plain**, SMTP **Envelope** (RFC 5321) and Email **Header** (RFC 5322/6532) formats. Dual-published as ESM and CJS – use it with `import` or `require`.
 
-Dual-published as ESM (`import`) and CJS (`require`); pick to match your codebase.
+Defaults to strict RFC adherence but includes a lenient [postel](https://en.wikipedia.org/wiki/Robustness_principle) option for real-world inputs. Best-in-class [O(n)](https://stackoverflow.com/questions/487258/what-is-a-plain-english-explanation-of-big-o-notation) performance ([benchmarks](PERFORMANCE.md)).
 
 ```js
 parseEnvelope('<from@example.com>') // → Address
@@ -25,9 +25,9 @@ npm install @haraka/email-address
 
 ## Usage
 
-The package ships ESM and CJS entry points side-by-side. Both expose an identical `Address` class.
+The ESM and CJS entry points both expose an identical `Address` class.
 
-### Envelopes (RFC 5321)
+### Envelope
 
 ```js
 import { Address, parseEnvelope } from '@haraka/email-address'
@@ -43,7 +43,7 @@ addr.isNull() // false
 new Address('<user@example.com>').format() // '<user@example.com>'
 ```
 
-### Headers (RFC 5322)
+### Header
 
 `parseHeader` accepts the full set of header productions — name-addr,
 addr-spec, address-list, and groups. The return is always an array,
@@ -71,9 +71,9 @@ parseSender('"Anne, PMPM" <info@x.example>') // → Address
 parseReplyTo('=?utf-8?Q?Anne?= <info@x.example>') // → Address[]
 ```
 
-### Plain-address validation (web forms, general-purpose use)
+### Plain-address validation (web forms, general-purpose)
 
-For places where you just need "is this a valid email address" — sign-up forms, contact pages, CSV imports — use `parseAddress` (throws on bad input) or `isValid` (returns a boolean). These reject anything that isn't a bare `local@domain`: angle brackets, comments, display names, address lists, and groups all fail.
+When you just need "is this a valid email address" — sign-up forms, contact pages, CSV imports — use `parseAddress` (throws on bad input) or `isValid` (returns a boolean). These reject anything that isn't a bare `local@domain`: angle brackets, comments, display names, address lists, and groups all fail.
 
 ```js
 import { parseAddress, isValid } from '@haraka/email-address'
@@ -122,11 +122,11 @@ addr.format(true) // '<δοκιμή@xn--hxajbheg2az3al.gr>'
 
 The package's `exports` map resolves to the right file automatically:
 
-| Consumer style                                    | Resolves to          | Notes                                                                              |
-| ------------------------------------------------- | -------------------- | ---------------------------------------------------------------------------------- |
-| `import { Address } from '@haraka/email-address'` | `index.js`           | Native ESM; the canonical source.                                                  |
-| `require('@haraka/email-address')`                | `dist/cjs/index.cjs` | Auto-generated CJS mirror tree under `dist/cjs/`. Drop CJS later = `rm -rf dist/`. |
-| TypeScript                                        | `index.d.ts`         | Same types regardless of entry point.                                              |
+| Consumer style                                    | Resolves to          | Notes                                 |
+| ------------------------------------------------- | -------------------- | ------------------------------------- |
+| `import { Address } from '@haraka/email-address'` | `index.js`           | Native ESM; the canonical source.     |
+| `require('@haraka/email-address')`                | `dist/cjs/index.cjs` | Auto-generated CJS mirror tree.       |
+| TypeScript                                        | `index.d.ts`         | Same types regardless of entry point. |
 
 ## Standards conformance
 
@@ -244,7 +244,7 @@ MIT.
 [rfc5893]: https://www.rfc-editor.org/rfc/rfc5893
 [rfc6531]: https://www.rfc-editor.org/rfc/rfc6531
 [uts46]: https://www.unicode.org/reports/tr46/
-[ci-img]: https://github.com/haraka/node-address-rfc2821/actions/workflows/ci.yml/badge.svg
-[ci-url]: https://github.com/haraka/node-address-rfc2821/actions/workflows/ci.yml
-[cov-img]: https://codecov.io/github/haraka/node-address-rfc2821/coverage.svg?branch=master
-[cov-url]: https://codecov.io/github/haraka/node-address-rfc2821?branch=master
+[ci-img]: https://github.com/haraka/email-address/actions/workflows/ci.yml/badge.svg
+[ci-url]: https://github.com/haraka/email-address/actions/workflows/ci.yml
+[cov-img]: https://codecov.io/github/haraka/email-address/coverage.svg?branch=main
+[cov-url]: https://codecov.io/github/haraka/email-address?branch=main
