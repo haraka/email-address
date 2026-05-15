@@ -9,6 +9,8 @@ const { Address, Group } = require('./lib/address.cjs')
 const { parseHeaderString } = require('./lib/header.cjs')
 const { parseAddress, isValid } = require('./lib/validator.cjs')
 const { extractName, isAllLower, isAllUpper, nameCase } = require('./lib/name-utils.cjs')
+// SUNSET 2027: opt-in legacy-contract wrapper — see lib/legacy.js.
+const { asLegacy, unwrapLegacy } = require('./lib/legacy.cjs')
 // RFC-5321 single envelope address.
 function parseEnvelope(input, opts) {
   return new Address(input, opts)
@@ -34,11 +36,17 @@ function parseReplyTo(input) {
   return parseHeader(input, { startAt: 'reply-to' })
 }
 
+// SUNSET 2027: `parse` is the address-rfc2822 spelling of `parseHeader`.
+// Kept so not-yet-migrated callers (`addrparser.parse(headerValue)`)
+// keep working. Remove in 2027 once consumers use `parseHeader`.
+const parse = parseHeader
+
 module.exports = {
   Address,
   Group,
   parseEnvelope,
   parseHeader,
+  parse,
   parseFrom,
   parseSender,
   parseReplyTo,
@@ -48,5 +56,7 @@ module.exports = {
   isAllLower,
   isAllUpper,
   nameCase,
+  asLegacy,
+  unwrapLegacy,
 }
 module.exports.default = module.exports

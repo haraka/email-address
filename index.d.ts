@@ -97,6 +97,36 @@ export declare function parseHeader(
   options?: HeaderParseOptions | HeaderStartAt,
 ): Array<Address | Group>
 
+/**
+ * SUNSET 2027 — alias of {@link parseHeader} under the address-rfc2822
+ * name. Provided so not-yet-migrated `addrparser.parse(headerValue)`
+ * callers keep working. Use `parseHeader`; this is removed in 2027.
+ */
+export declare const parse: typeof parseHeader
+
+/**
+ * SUNSET 2027 — opt-in legacy-contract wrapper. Returns a Proxy over an
+ * `Address` whose `address` and `host` reads behave as the string in
+ * every string context AND are callable (`addr.host()` → string), so
+ * code written against address-rfc2821 / address-rfc2822 keeps working.
+ * All other members pass through. Only the boundary that hands
+ * Addresses to legacy consumers should wrap; the canonical primitive
+ * API is unchanged. Removed in 2027.
+ *
+ * Caveat (wrapped fields only): `typeof w.host === 'function'` and
+ * strict `w.host === 'x'` is `false`; use `==`, template strings, or
+ * `String(w.host)`.
+ */
+export declare function asLegacy<T>(addr: T): T
+
+/**
+ * SUNSET 2027 — inverse of {@link asLegacy}. Returns the underlying
+ * `Address` if `addr` is an asLegacy wrapper, otherwise `addr`
+ * unchanged. Use before re-hydrating so raw string fields (not the
+ * callable accessors) are copied.
+ */
+export declare function unwrapLegacy<T>(addr: T): T
+
 /** `parseHeader(input, { startAt: 'from' })`. */
 export declare function parseFrom(input: string): Array<Address | Group>
 
