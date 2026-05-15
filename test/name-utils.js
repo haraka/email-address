@@ -56,66 +56,59 @@ describe('extractName — ReDoS resistance', () => {
   // `.*?` encoded-word matcher, a bracket-strip regex with no closer,
   // and the nested-quantifier first.last-local extractor. Each ran in
   // O(n²) before the rewrite; the deterministic helpers keep them
-  // linear. Generous (100ms) thresholds keep CI quiet on slow runners
-  // while still catching a real polynomial regression.
-  const BUDGET_MS = 100
-  const REPS = 50_000
+  // linear.
+  //
+  // Assert *scaling*, not wall-clock: an 8× larger input on a linear
+  // routine costs ≈8× the time, a quadratic one ≈64×. A ratio ceiling
+  // of 24 passes linear-plus-noise and still trips a real polynomial
+  // regression — and, unlike an absolute ms budget, is immune to slow
+  // CI runners (the flake this replaces).
+  const SMALL = 50_000
+  const BIG = SMALL * 8
+  const MAX_RATIO = 24
 
-  function timed(fn) {
-    const start = process.hrtime.bigint()
-    fn()
-    return Number(process.hrtime.bigint() - start) / 1e6
+  const minOf = (fn, k = 5) => {
+    let best = Infinity
+    for (let i = 0; i < k; i++) {
+      const start = process.hrtime.bigint()
+      fn()
+      const ms = Number(process.hrtime.bigint() - start) / 1e6
+      if (ms < best) best = ms
+    }
+    return best
   }
 
-  it('encoded-word check stays linear on pathological "=?a=?a=?…" input', () => {
-    const input = '=?' + 'a=?'.repeat(REPS)
-    const ms = timed(() => extractName(input, ''))
-    assert.ok(ms < BUDGET_MS, `encoded-word check on ${input.length} chars took ${ms.toFixed(1)}ms`)
-  })
+  // `make(n)` returns the [phrase, address] args for size n. Returns
+  // the BIG/SMALL time ratio after warming the JIT at both sizes.
+  const ratio = (make) => {
+    const small = make(SMALL)
+    const big = make(BIG)
+    extractName(...small)
+    extractName(...big)
+    const tSmall = minOf(() => extractName(...small))
+    const tBig = minOf(() => extractName(...big))
+    // floor tiny baselines so sub-millisecond jitter can't blow up the
+    // ratio for routines that short-circuit (genuinely sub-linear).
+    return tBig / Math.max(tSmall, 0.05)
+  }
 
-  it('comment strip stays linear on unbalanced "(((…" input', () => {
-    const input = '('.repeat(REPS)
-    const ms = timed(() => extractName(input, ''))
-    assert.ok(ms < BUDGET_MS, `comment strip on ${input.length} chars took ${ms.toFixed(1)}ms`)
-  })
+  const cases = {
+    'encoded-word check on "=?a=?a=?…"': (n) => ['=?' + 'a=?'.repeat(n), ''],
+    'comment strip on "(((…"': (n) => ['('.repeat(n), ''],
+    'bracket strip on "[[[…"': (n) => ['['.repeat(n), ''],
+    'local-part fallback on "$$$…@"': (n) => ['', '$'.repeat(n) + '@example.com'],
+    'local-part fallback on "$.$.…@"': (n) => ['', '$.'.repeat(n) + '@example.com'],
+    'Last-First reorder on "!,!,…"': (n) => ['!,'.repeat(n) + '!', ''],
+    'edge-trim on whitespace-only': (n) => ['\t'.repeat(n), ''],
+  }
 
-  it('bracket strip stays linear on unbalanced "[[[…" input', () => {
-    const input = '['.repeat(REPS)
-    const ms = timed(() => extractName(input, ''))
-    assert.ok(ms < BUDGET_MS, `bracket strip on ${input.length} chars took ${ms.toFixed(1)}ms`)
-  })
-
-  it('local-part fallback stays linear on "$$$$…@…" addresses', () => {
-    const address = '$'.repeat(REPS) + '@example.com'
-    const ms = timed(() => extractName('', address))
-    assert.ok(
-      ms < BUDGET_MS,
-      `local-part fallback on ${address.length} chars took ${ms.toFixed(1)}ms`,
-    )
-  })
-
-  it('local-part fallback stays linear on "$.$.$.…@…" addresses', () => {
-    const address = '$.'.repeat(REPS) + '@example.com'
-    const ms = timed(() => extractName('', address))
-    assert.ok(
-      ms < BUDGET_MS,
-      `dotted local-part fallback on ${address.length} chars took ${ms.toFixed(1)}ms`,
-    )
-  })
-
-  it('Last-First reorder stays linear on "!,!,!,!,…" input', () => {
-    // Used to be `/^([^\s]+) ?, ?(.*)$/` where `[^\s]+` overlaps with
-    // the literal `,`. Deterministic indexOf swap keeps it linear.
-    const input = '!,'.repeat(REPS) + '!'
-    const ms = timed(() => extractName(input, ''))
-    assert.ok(ms < BUDGET_MS, `last-first reorder on ${input.length} chars took ${ms.toFixed(1)}ms`)
-  })
-
-  it('edge-trim stays linear on long whitespace-only input', () => {
-    // Replaces `/(^[\s'"]+|[\s'"]+$)/g` — flagged for the greedy
-    // class with the global flag.
-    const input = '\t'.repeat(REPS)
-    const ms = timed(() => extractName(input, ''))
-    assert.ok(ms < BUDGET_MS, `edge-trim on ${input.length} chars took ${ms.toFixed(1)}ms`)
-  })
+  for (const [name, make] of Object.entries(cases)) {
+    it(`stays sub-quadratic: ${name}`, () => {
+      const r = ratio(make)
+      assert.ok(
+        r < MAX_RATIO,
+        `${name}: 8× input scaled time ${r.toFixed(1)}× (≥ ${MAX_RATIO}× ⇒ super-linear)`,
+      )
+    })
+  }
 })
