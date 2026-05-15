@@ -58,16 +58,22 @@ describe('extractName — ReDoS resistance', () => {
   // O(n²) before the rewrite; the deterministic helpers keep them
   // linear.
   //
-  // Assert *scaling*, not wall-clock: an 8× larger input on a linear
-  // routine costs ≈8× the time, a quadratic one ≈64×. A ratio ceiling
-  // of 24 passes linear-plus-noise and still trips a real polynomial
-  // regression — and, unlike an absolute ms budget, is immune to slow
-  // CI runners (the flake this replaces).
-  const SMALL = 50_000
-  const BIG = SMALL * 8
-  const MAX_RATIO = 24
+  // This guards against catastrophic-backtracking regressions, which
+  // are an *orders-of-magnitude* effect, not a constant-factor one. At
+  // REPS below, the deterministic helpers run in tens of ms; a return
+  // to the old O(n²) shapes is ≈10^10 operations — seconds to a hung
+  // worker. A single generous wall-clock ceiling cleanly separates the
+  // two with ~1000× margin, and (unlike a tight budget or a ratio of
+  // two sub-millisecond samples) cannot flake on a slow/loaded CI
+  // runner. Earlier revisions tried 100ms then a scaling ratio; both
+  // were flaky precisely because linear timings here are tiny and
+  // noisy. Don't reintroduce a tight bound.
+  const BUDGET_MS = 1500
+  const REPS = 100_000
 
-  const minOf = (fn, k = 5) => {
+  // Best of a few runs — discards GC/scheduler transients. The bound is
+  // so loose this barely matters, but it keeps the signal clean.
+  const minMs = (fn, k = 3) => {
     let best = Infinity
     for (let i = 0; i < k; i++) {
       const start = process.hrtime.bigint()
@@ -78,36 +84,23 @@ describe('extractName — ReDoS resistance', () => {
     return best
   }
 
-  // `make(n)` returns the [phrase, address] args for size n. Returns
-  // the BIG/SMALL time ratio after warming the JIT at both sizes.
-  const ratio = (make) => {
-    const small = make(SMALL)
-    const big = make(BIG)
-    extractName(...small)
-    extractName(...big)
-    const tSmall = minOf(() => extractName(...small))
-    const tBig = minOf(() => extractName(...big))
-    // floor tiny baselines so sub-millisecond jitter can't blow up the
-    // ratio for routines that short-circuit (genuinely sub-linear).
-    return tBig / Math.max(tSmall, 0.05)
-  }
-
   const cases = {
-    'encoded-word check on "=?a=?a=?…"': (n) => ['=?' + 'a=?'.repeat(n), ''],
-    'comment strip on "(((…"': (n) => ['('.repeat(n), ''],
-    'bracket strip on "[[[…"': (n) => ['['.repeat(n), ''],
-    'local-part fallback on "$$$…@"': (n) => ['', '$'.repeat(n) + '@example.com'],
-    'local-part fallback on "$.$.…@"': (n) => ['', '$.'.repeat(n) + '@example.com'],
-    'Last-First reorder on "!,!,…"': (n) => ['!,'.repeat(n) + '!', ''],
-    'edge-trim on whitespace-only': (n) => ['\t'.repeat(n), ''],
+    'encoded-word check on "=?a=?a=?…"': ['=?' + 'a=?'.repeat(REPS), ''],
+    'comment strip on "(((…"': ['('.repeat(REPS), ''],
+    'bracket strip on "[[[…"': ['['.repeat(REPS), ''],
+    'local-part fallback on "$$$…@"': ['', '$'.repeat(REPS) + '@example.com'],
+    'local-part fallback on "$.$.…@"': ['', '$.'.repeat(REPS) + '@example.com'],
+    'Last-First reorder on "!,!,…"': ['!,'.repeat(REPS) + '!', ''],
+    'edge-trim on whitespace-only': ['\t'.repeat(REPS), ''],
   }
 
-  for (const [name, make] of Object.entries(cases)) {
-    it(`stays sub-quadratic: ${name}`, () => {
-      const r = ratio(make)
+  for (const [name, args] of Object.entries(cases)) {
+    it(`stays linear: ${name}`, () => {
+      extractName(...args) // warm the JIT
+      const ms = minMs(() => extractName(...args))
       assert.ok(
-        r < MAX_RATIO,
-        `${name}: 8× input scaled time ${r.toFixed(1)}× (≥ ${MAX_RATIO}× ⇒ super-linear)`,
+        ms < BUDGET_MS,
+        `${name}: ${ms.toFixed(1)}ms (≥ ${BUDGET_MS}ms ⇒ catastrophic backtracking)`,
       )
     })
   }

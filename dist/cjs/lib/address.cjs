@@ -37,6 +37,9 @@ const CTRL_CHECK_KEYS = ['user', 'host', 'original_host', 'phrase', 'comment']
 const { toASCIIDomain } = require('./literals.cjs')
 const { parseEnvelopeAddress } = require('./envelope.cjs')
 const { extractName } = require('./name-utils.cjs')
+// SUNSET 2027: shared key for unwrapping an asLegacy proxy before
+// re-hydration. Single source of truth in lib/legacy.js.
+const { RAW } = require('./legacy.cjs')
 class Group {
   constructor(phrase, addresses) {
     this.phrase = phrase || ''
@@ -62,10 +65,11 @@ class Address {
     this.comment = ''
     this.group = null
 
-    if (typeof user === 'object' && user !== null && user.original) {
+    const source = (user && user[RAW]) || user
+    if (typeof source === 'object' && source !== null && source.original) {
       // Construct from a JSON-rehydrated object — copy only known own fields.
       for (const k of REHYDRATE_KEYS) {
-        if (Object.hasOwn(user, k)) this[k] = user[k]
+        if (Object.hasOwn(source, k)) this[k] = source[k]
       }
       for (const k of CTRL_CHECK_KEYS) {
         if (typeof this[k] === 'string' && hasCtrl(this[k])) {

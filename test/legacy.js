@@ -95,4 +95,53 @@ describe('SUNSET 2027: asLegacy wrapper', () => {
     assert.equal(unwrapLegacy(a), a)
     assert.equal(unwrapLegacy(null), null)
   })
+
+  it('re-hydrating from a proxy yields primitive fields', () => {
+    const a = new Address('<foo@example.com>')
+    const w = asLegacy(a)
+    assert.equal(typeof w.host, 'function')
+
+    const a2 = new Address(w)
+    assert.equal(typeof a2.host, 'string')
+    assert.equal(a2.host, 'example.com')
+  })
+
+  it('legacy fields are string-like only (no leaked Function surface)', () => {
+    const w = asLegacy(new Address('<foo@example.com>'))
+    // contract is "a string that is also a zero-arg callable" — it must
+    // not expose Function.prototype (.call/.bind) or poisoned .caller.
+    assert.equal(w.host(), 'example.com')
+    assert.equal(w.host.call, undefined)
+    assert.equal(w.host.bind, undefined)
+    assert.equal(w.host.caller, undefined)
+  })
+
+  it('asLegacy does not inject properties into non-Address objects', () => {
+    const obj = { foo: 'bar' }
+    const w = asLegacy(obj)
+    assert.equal(w.foo, 'bar')
+    assert.equal(w.address, undefined)
+    assert.equal(w.host, undefined)
+    assert.equal('address' in w, false)
+  })
+
+  it('asLegacy still binds methods on non-Address objects', () => {
+    const obj = {
+      val: 42,
+      getVal() {
+        return this.val
+      },
+    }
+    const w = asLegacy(obj)
+    const getVal = w.getVal
+    assert.equal(getVal(), 42) // should be bound to obj
+  })
+
+  it('legacy fields still behave like strings', () => {
+    const w = asLegacy(new Address('<foo@example.com>'))
+    assert.equal(w.host.length, 11)
+    assert.equal(w.host.toUpperCase(), 'EXAMPLE.COM')
+    assert.equal(w.host + '!', 'example.com!')
+    assert.equal(JSON.stringify(w.host), '"example.com"')
+  })
 })
