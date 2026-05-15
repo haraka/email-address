@@ -4,6 +4,9 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [3.1.4] - 2026-05-15
+
+
 ### [3.1.3] - 2026-05-14
 
 - feat: add compat aliases to match address-rfc2822 (sunset 2027)
@@ -59,3 +62,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 [3.1.1]: https://github.com/haraka/email-address/releases/tag/v3.1.1
 [3.1.2]: https://github.com/haraka/email-address/releases/tag/v3.1.2
 [3.1.3]: https://github.com/haraka/email-address/releases/tag/v3.1.3
+[3.1.4]: https://github.com/haraka/email-address/releases/tag/v3.1.4
