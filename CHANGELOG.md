@@ -6,6 +6,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### [3.1.4] - 2026-05-15
 
+- fix: tighten re-hydrated to prevent inheriting asLegacy proxy
+- test: fix so GC or slow runners don't cause test failure
 
 ### [3.1.3] - 2026-05-14
 

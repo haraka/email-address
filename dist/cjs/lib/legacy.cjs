@@ -37,7 +37,7 @@ function asLegacy(addr) {
   return new Proxy(addr, {
     get(t, prop) {
       if (prop === RAW) return t
-      if (LEGACY_FIELDS.has(prop)) return legacyAccessor(t[prop])
+      if (LEGACY_FIELDS.has(prop) && prop in t) return legacyAccessor(t[prop])
       const v = Reflect.get(t, prop)
       // bind methods back to the real instance so `this` is the
       // Address, not the Proxy (avoids re-entrant trap surprises).
