@@ -9,11 +9,15 @@
  *   nodemailer           vs  email-address  (header   / RFC-5322)
  *   @hapi/address        vs  email-address  (validation / isValid)
  *
+ * Any competitor whose package isn't installed locally is silently omitted
+ * from both the console table and the generated PERFORMANCE.md. A section
+ * with no remaining competitors is skipped entirely.
+ *
  * Run standalone:   'npm run bench'   (from the email-address package root)
  * Import:           const { runBenchmarks } = require('./scripts/bench.cjs')
  *
- * Note: @hapi/address requires a CJS build. If ../../../address/dist/index.js is missing, run:
- *   cd ../../../address && npx tsc --outDir dist --module commonjs --moduleResolution node
+ * @hapi/address requires a CJS build. To include it:
+ *   cd ../../address && npx tsc --outDir dist --module commonjs --moduleResolution node
  */
 
 const { performance } = require('node:perf_hooks')
@@ -21,20 +25,60 @@ const os = require('node:os')
 const fs = require('node:fs')
 const path = require('node:path')
 
-const rfc2821 = require('../../address-rfc2821/index.js')
-const rfc2822 = require('../../address-rfc2822/index.js')
-const sap = require('../../../smtp-address-parser/dist/lib/index.js')
-const nodemailer = require('../../../nodemailer/lib/addressparser/index.js')
 const ea = require('../dist/cjs/index.cjs')
 
-let hapi
-try {
-  hapi = require('../../../address/dist/index.js')
-} catch {
-  console.warn(
-    'Warning: @hapi/address CJS build not found. Skipping validation section.\n' +
-      '  To include it: cd ../../../address && npx tsc --outDir dist --module commonjs --moduleResolution node\n',
-  )
+// Each competitor declares where its checkout lives (relative to the
+// package root, which is `npm run bench`'s cwd) plus the upstream repo
+// to clone it from. `postInstall` runs after the clone for packages
+// that need a build step before they can be required.
+const COMPETITOR_INSTALL = {
+  rfc2821: {
+    modulePath: '../../address-rfc2821/index.js',
+    targetDir: '../address-rfc2821',
+    repo: 'https://github.com/haraka/node-address-rfc2821.git',
+  },
+  rfc2822: {
+    modulePath: '../../address-rfc2822/index.js',
+    targetDir: '../address-rfc2822',
+    repo: 'https://github.com/haraka/node-address-rfc2822.git',
+  },
+  sap: {
+    modulePath: '../../../smtp-address-parser/dist/lib/index.js',
+    targetDir: '../../smtp-address-parser',
+    repo: 'https://github.com/gene-hightower/smtp-address-parser.git',
+    postInstall: 'npm install && npm run build',
+  },
+  nodemailer: {
+    modulePath: '../../../nodemailer/lib/addressparser/index.js',
+    targetDir: '../../nodemailer',
+    repo: 'https://github.com/nodemailer/nodemailer.git',
+  },
+  hapi: {
+    modulePath: '../../../address/dist/index.js',
+    targetDir: '../../address',
+    repo: 'https://github.com/hapijs/address.git',
+    postInstall: 'npm install && npx tsc --outDir dist --module commonjs --moduleResolution node',
+  },
+}
+
+function tryRequireCompetitor(install) {
+  try {
+    return require(install.modulePath)
+  } catch {
+    const lines = [`  git clone ${install.repo} ${install.targetDir}`]
+    if (install.postInstall) {
+      lines.push(`  (cd ${install.targetDir} && ${install.postInstall})`)
+    }
+    console.warn(
+      `bench: skipping ${install.targetDir} (not installed). To enable:\n${lines.join('\n')}\n`,
+    )
+    return null
+  }
+}
+
+const mods = {}
+for (const [key, install] of Object.entries(COMPETITOR_INSTALL)) {
+  mods[key] = tryRequireCompetitor(install)
 }
 
 // ---------------------------------------------------------------------------
@@ -45,14 +89,6 @@ const WARMUP = 10_000
 const ITERATIONS = 50_000
 const ROUNDS = 5
 
-/**
- * Measure the throughput of `fn` in operations per second.
- * Runs `WARMUP` iterations first (JIT warm-up), then `ROUNDS` timed trials
- * of `ITERATIONS` each and returns the best (fastest) run.
- *
- * @param {Function} fn - Zero-argument function to benchmark.
- * @returns {number} ops/s (best-of-N rounds)
- */
 function measure(fn) {
   for (let i = 0; i < WARMUP; i++) fn()
 
@@ -67,13 +103,27 @@ function measure(fn) {
   return Math.round((ITERATIONS / bestMs) * 1_000)
 }
 
+function safeMeasure(fn) {
+  try {
+    return measure(fn)
+  } catch {
+    return 0
+  }
+}
+
+function multiplier(next, prev) {
+  return (next / prev).toFixed(1)
+}
+
+function fmtOps(n) {
+  if (n === 0) return 'N/A'
+  return n.toLocaleString('en-US')
+}
+
 // ---------------------------------------------------------------------------
 // Test fixtures
 // ---------------------------------------------------------------------------
 
-// All inputs are bare mailbox form (no angle brackets) so that all three
-// envelope parsers can handle them. address-rfc2821 and email-address
-// additionally support the <Path> wrapping form used in SMTP commands.
 const ENVELOPE_CASES = [
   { label: 'simple mailbox', input: 'user@example.com' },
   { label: 'quoted local-part', input: '"quoted user"@example.com' },
@@ -94,9 +144,6 @@ const HEADER_CASES = [
   },
 ]
 
-// Validation cases: a mix of inputs both validators agree on plus inputs where
-// they diverge (email-address follows full RFC 5321 grammar; @hapi/address
-// targets web-form validation and rejects quoted local-parts and IP literals).
 const VALIDATION_CASES = [
   { label: 'simple mailbox', input: 'user@example.com' },
   { label: 'quoted local-part', input: '"quoted user"@example.com' },
@@ -106,41 +153,190 @@ const VALIDATION_CASES = [
 ]
 
 // ---------------------------------------------------------------------------
-// Helpers
+// Competitor + section model
 // ---------------------------------------------------------------------------
 
-/** How many times faster `next` is vs `prev` (e.g. "20.4×"). */
-function multiplier(next, prev) {
-  return (next / prev).toFixed(1)
+// Per-competitor metadata used by both the console table and the markdown
+// summary. `available` is what gates inclusion in any output.
+const COMPETITOR_META = {
+  rfc2821: {
+    label: 'address-rfc2821',
+    available: () => mods.rfc2821 !== null,
+    run: (input) => new mods.rfc2821.Address(input),
+    summary: {
+      name: '[address-rfc2821][addr2821]',
+      impl: '[nearley][nearley] grammar (PEG-like)',
+    },
+  },
+  sap: {
+    label: 'smtp-address-parser',
+    available: () => mods.sap !== null,
+    run: (input) => mods.sap.parse(input),
+    summary: {
+      name: '[smtp-address-parser][sap]',
+      impl: '[nearley][nearley] grammar (PEG-like)',
+    },
+  },
+  rfc2822: {
+    label: 'address-rfc2822',
+    available: () => mods.rfc2822 !== null,
+    run: (input) => mods.rfc2822.parse(input),
+    summary: {
+      name: '[address-rfc2822][addr2822]',
+      impl: '[email-addresses][eaddr] PEG parser',
+    },
+  },
+  nodemailer: {
+    label: 'nodemailer',
+    available: () => mods.nodemailer !== null,
+    run: (input) => mods.nodemailer(input),
+    summary: {
+      name: '[nodemailer][nodemailer]',
+      impl: 'hand-rolled tokeniser',
+    },
+  },
+  hapi: {
+    label: '@hapi/address',
+    available: () => mods.hapi !== null,
+    run: (input) => mods.hapi.isEmailValid(input),
+    summary: {
+      name: '[@hapi/address][hapi-a]',
+      impl: 'hand-rolled regex + string split',
+    },
+  },
 }
 
-function fmtOps(n) {
-  if (n === 0) return 'N/A'
-  return n.toLocaleString('en-US')
-}
+const LOCAL_LABEL = 'email-address'
+const CASE_COL = 22
 
-function safeMeasure(fn) {
-  try {
-    return measure(fn)
-  } catch {
-    return 0
+// Section descriptors. `competitorKeys` lists candidate competitors in display
+// order; missing ones are filtered out at run time. `deltaKey` selects which
+// competitor anchors the trailing Δ column.
+const SECTIONS = [
+  {
+    key: 'envelope',
+    title: 'Envelope address parsing  (RFC 5321)',
+    domain: 'Envelope',
+    cases: ENVELOPE_CASES,
+    competitorKeys: ['rfc2821', 'sap'],
+    deltaKey: 'rfc2821',
+    local: (input) => new ea.Address(input),
+    mdTitle: 'Envelope Parsing',
+    mdPreamble:
+      '- _address-rfc2821_ and _email-address_ also accept the `<Path>` wrapping form used in SMTP commands (`MAIL FROM:<user@example.com>`).\n' +
+      '- _smtp-address-parser_ only parses the bare mailbox form.',
+  },
+  {
+    key: 'header',
+    title: 'Header address parsing  (RFC 5322)',
+    domain: 'Header',
+    cases: HEADER_CASES,
+    competitorKeys: ['rfc2822', 'nodemailer'],
+    deltaKey: 'rfc2822',
+    local: (input) => ea.parseHeader(input),
+    mdTitle: 'Header Parsing',
+    mdFooter:
+      '- _address-rfc2822_ is a thin wrapper around [_email-addresses_][eaddr], they are equivalent for benchmarking purposes.',
+    truncInput: true,
+  },
+  {
+    key: 'validation',
+    title: 'Email address validation  (isValid)',
+    domain: 'Validation',
+    cases: VALIDATION_CASES,
+    competitorKeys: ['hapi'],
+    deltaKey: 'hapi',
+    local: (input) => ea.isValid(input),
+    captureResults: true,
+    mdTitle: 'Validation',
+    mdPreamble:
+      'Both _email-address_ and _@hapi/address_ expose a boolean `isValid` / `isEmailValid` API. They differ in scope: _email-address_ validates the full Envelope grammar (quoted local-parts, IP literals);\n' +
+      '_@hapi/address_ targets web-form validation and rejects those forms.',
+  },
+]
+
+// Markdown section ordering differs from console ordering in the legacy
+// layout; preserve that here so PERFORMANCE.md keeps its shape.
+const MD_SECTION_ORDER = ['header', 'envelope', 'validation']
+
+// ---------------------------------------------------------------------------
+// Runner
+// ---------------------------------------------------------------------------
+
+function runSection(section) {
+  const competitors = section.competitorKeys
+    .map((k) => ({ key: k, ...COMPETITOR_META[k] }))
+    .filter((c) => c.available())
+
+  if (competitors.length === 0) return null
+
+  const colWidths = competitors.map((c) => Math.max(c.label.length, 14))
+  const localWidth = Math.max(LOCAL_LABEL.length, 14)
+  const deltaWidth = 6
+  const totalWidth =
+    CASE_COL + colWidths.reduce((s, w) => s + w + 1, 0) + (localWidth + 1) + (deltaWidth + 1)
+
+  console.log(section.title)
+  console.log('─'.repeat(totalWidth))
+  const headerCells = ['Case'.padEnd(CASE_COL)]
+  competitors.forEach((c, i) => headerCells.push(c.label.padStart(colWidths[i])))
+  headerCells.push(LOCAL_LABEL.padStart(localWidth))
+  headerCells.push('Δ'.padStart(deltaWidth))
+  console.log(headerCells.join(' '))
+  console.log('─'.repeat(totalWidth))
+
+  const rows = []
+  for (const { label, input } of section.cases) {
+    process.stdout.write(`  ${label.padEnd(CASE_COL - 2)}`)
+
+    const competitorOps = {}
+    for (const c of competitors) competitorOps[c.key] = safeMeasure(() => c.run(input))
+    const localOps = safeMeasure(() => section.local(input))
+
+    const anchorKey =
+      competitorOps[section.deltaKey] != null ? section.deltaKey : competitors[0].key
+    const anchorOps = competitorOps[anchorKey] || 0
+    const delta = anchorOps > 0 ? `${multiplier(localOps, anchorOps)}×` : 'n/a'
+
+    const row = { label, input, local: localOps, competitors: competitorOps }
+    if (section.captureResults) {
+      try {
+        row.localResult = section.local(input)
+      } catch {
+        row.localResult = null
+      }
+      row.competitorResults = {}
+      for (const c of competitors) {
+        try {
+          row.competitorResults[c.key] = c.run(input)
+        } catch {
+          row.competitorResults[c.key] = null
+        }
+      }
+    }
+    rows.push(row)
+
+    const cells = []
+    competitors.forEach((c, i) => cells.push(fmtOps(competitorOps[c.key]).padStart(colWidths[i])))
+    cells.push(fmtOps(localOps).padStart(localWidth))
+    cells.push(delta.padStart(deltaWidth))
+    console.log(` ${cells.join(' ')}`)
+  }
+  console.log()
+
+  return {
+    key: section.key,
+    domain: section.domain,
+    competitors: competitors.map((c) => ({ key: c.key, label: c.label, summary: c.summary })),
+    rows,
+    mdTitle: section.mdTitle,
+    mdPreamble: section.mdPreamble,
+    mdFooter: section.mdFooter,
+    truncInput: !!section.truncInput,
+    captureResults: !!section.captureResults,
   }
 }
 
-// ---------------------------------------------------------------------------
-// Main benchmark runner
-// ---------------------------------------------------------------------------
-
-/**
- * Run all benchmarks and return structured results.
- *
- * @returns {{
- *   env: { node: string, platform: string, date: string },
- *   envelope:   Array<{label: string, input: string, rfc2821: number, sapOps: number, emailAddress: number}>,
- *   header:     Array<{label: string, input: string, rfc2822: number, nodemailer: number, emailAddress: number}>,
- *   validation: Array<{label: string, input: string, emailAddress: number, hapi: number, eaResult: boolean, hapiResult: boolean}>,
- * }}
- */
 function runBenchmarks() {
   const env = {
     node: process.version,
@@ -152,184 +348,88 @@ function runBenchmarks() {
   console.log(`Node ${env.node}  |  ${env.platform}  |  ${env.date}`)
   console.log()
 
-  // ── Envelope (RFC-5321) ──────────────────────────────────────────────────
-  console.log('Envelope address parsing  (RFC 5321)')
-  console.log('─'.repeat(90))
-  console.log(
-    `${'Case'.padEnd(22)} ${'address-rfc2821'.padStart(16)} ${'smtp-address-parser'.padStart(21)} ${'email-address'.padStart(22)} ${'Δ'.padStart(6)}`,
-  )
-  console.log('─'.repeat(90))
-
-  const envelopeResults = []
-  for (const { label, input } of ENVELOPE_CASES) {
-    process.stdout.write(`  ${label.padEnd(20)}`)
-
-    const r2821 = safeMeasure(() => new rfc2821.Address(input))
-    const sapOps = safeMeasure(() => sap.parse(input))
-    const eaOps = safeMeasure(() => new ea.Address(input))
-    const mult = r2821 > 0 ? `${multiplier(eaOps, r2821)}×` : 'n/a'
-
-    envelopeResults.push({ label, input, rfc2821: r2821, sapOps, emailAddress: eaOps })
-    console.log(
-      `${fmtOps(r2821).padStart(16)} ${fmtOps(sapOps).padStart(21)} ${fmtOps(eaOps).padStart(22)} ${mult.padStart(6)}`,
-    )
-  }
-
-  // ── Header (RFC-5322) ────────────────────────────────────────────────────
-  console.log()
-  console.log('Header address parsing  (RFC 5322)')
-  console.log('─'.repeat(95))
-  console.log(
-    `${'Case'.padEnd(22)} ${'address-rfc2822'.padStart(16)} ${'nodemailer'.padStart(14)} ${'email-address'.padStart(22)} ${'Δ (vs rfc2822)'.padStart(14)}`,
-  )
-  console.log('─'.repeat(95))
-
-  const headerResults = []
-  for (const { label, input } of HEADER_CASES) {
-    process.stdout.write(`  ${label.padEnd(20)}`)
-
-    const r2822 = safeMeasure(() => rfc2822.parse(input))
-    const nmOps = safeMeasure(() => nodemailer(input))
-    const eaOps = safeMeasure(() => ea.parseHeader(input))
-    const mult = r2822 > 0 ? `${multiplier(eaOps, r2822)}×` : 'n/a'
-
-    headerResults.push({ label, input, rfc2822: r2822, nodemailer: nmOps, emailAddress: eaOps })
-    console.log(
-      `${fmtOps(r2822).padStart(16)} ${fmtOps(nmOps).padStart(14)} ${fmtOps(eaOps).padStart(22)} ${mult.padStart(14)}`,
-    )
-  }
-
-  console.log()
-
-  // ── Validation ──────────────────────────────────────────────────────────
-  const validationResults = []
-  if (hapi) {
-    console.log('Email address validation  (isValid)')
-    console.log('─'.repeat(80))
-    console.log(
-      `${'Case'.padEnd(22)} ${'email-address'.padStart(16)} ${'@hapi/address'.padStart(16)} ${'Δ'.padStart(6)}`,
-    )
-    console.log('─'.repeat(80))
-
-    for (const { label, input } of VALIDATION_CASES) {
-      process.stdout.write(`  ${label.padEnd(20)}`)
-
-      const eaOps = safeMeasure(() => ea.isValid(input))
-      const hapiOps = safeMeasure(() => hapi.isEmailValid(input))
-      const mult = hapiOps > 0 ? `${multiplier(eaOps, hapiOps)}×` : 'n/a'
-      const eaResult = ea.isValid(input)
-      const hapiResult = hapi.isEmailValid(input)
-
-      validationResults.push({
-        label,
-        input,
-        emailAddress: eaOps,
-        hapi: hapiOps,
-        eaResult,
-        hapiResult,
-      })
-      console.log(
-        `${fmtOps(eaOps).padStart(16)} ${fmtOps(hapiOps).padStart(16)} ${mult.padStart(6)}`,
-      )
-    }
-    console.log()
-  }
-
-  return { env, envelope: envelopeResults, header: headerResults, validation: validationResults }
+  const sections = SECTIONS.map(runSection).filter(Boolean)
+  return { env, sections }
 }
 
 // ---------------------------------------------------------------------------
 // Markdown generator
 // ---------------------------------------------------------------------------
 
-/**
- * Render benchmark results as a Markdown document.
- *
- * @param {ReturnType<runBenchmarks>} results
- * @returns {string}
- */
+function avgSpeedup(section, competitorKey) {
+  const wins = section.rows.filter((r) => r.competitors[competitorKey] > 0)
+  if (wins.length === 0) return null
+  const sum = wins.reduce((s, r) => s + r.local / r.competitors[competitorKey], 0)
+  return (sum / wins.length).toFixed(1)
+}
+
+function summaryRows(sections) {
+  const rows = []
+  for (const sectionKey of MD_SECTION_ORDER) {
+    const section = sections.find((s) => s.key === sectionKey)
+    if (!section) continue
+    for (const c of section.competitors) {
+      const speedup = avgSpeedup(section, c.key)
+      if (speedup === null) continue
+      rows.push(
+        `| ${c.summary.name} | ${section.domain} | ${c.summary.impl} | ~${speedup}× faster |`,
+      )
+    }
+  }
+  return rows.join('\n')
+}
+
+function sectionTable(section) {
+  const headerCells = [
+    'Description',
+    'Input',
+    `${LOCAL_LABEL}<br>(ops/s)`,
+    ...section.competitors.map((c) => `${c.label}<br>(ops/s)`),
+  ]
+  const aligns = ['---', '---', '---:', ...section.competitors.map(() => '---:')]
+
+  const lines = [`| ${headerCells.join(' | ')} |`, `|${aligns.map((a) => `${a}`).join('|')}|`]
+
+  for (const row of section.rows) {
+    const dispInput =
+      section.truncInput && row.input.length > 52 ? `${row.input.slice(0, 50)}…` : row.input
+    const cells = [row.label, `\`${dispInput}\``, fmtOps(row.local)]
+    for (const c of section.competitors) {
+      if (section.captureResults) {
+        // ❌ when this competitor rejects an input email-address accepts —
+        // the timing is meaningless because the input is outside its scope.
+        const cell =
+          row.localResult && !row.competitorResults[c.key] ? '❌' : fmtOps(row.competitors[c.key])
+        cells.push(cell)
+      } else {
+        cells.push(fmtOps(row.competitors[c.key]))
+      }
+    }
+    lines.push(`| ${cells.join(' | ')} |`)
+  }
+  return lines.join('\n')
+}
+
+function renderSection(section) {
+  const parts = [`## ${section.mdTitle}`, '']
+  if (section.mdPreamble) parts.push(section.mdPreamble, '')
+  parts.push(sectionTable(section))
+  if (section.mdFooter) parts.push('', section.mdFooter)
+  return parts.join('\n')
+}
+
 function generateMarkdown(results) {
-  const { env, envelope, header, validation } = results
+  const { env, sections } = results
 
-  const envelopeAvgMult = (
-    envelope.filter((r) => r.rfc2821 > 0).reduce((s, r) => s + r.emailAddress / r.rfc2821, 0) /
-    envelope.filter((r) => r.rfc2821 > 0).length
-  ).toFixed(1)
+  const orderedSections = MD_SECTION_ORDER.map((k) => sections.find((s) => s.key === k)).filter(
+    Boolean,
+  )
 
-  const headerAvgMult = (
-    header.filter((r) => r.rfc2822 > 0).reduce((s, r) => s + r.emailAddress / r.rfc2822, 0) /
-    header.filter((r) => r.rfc2822 > 0).length
-  ).toFixed(1)
-
-  const nmAvgMult = (
-    header.filter((r) => r.nodemailer > 0).reduce((s, r) => s + r.emailAddress / r.nodemailer, 0) /
-    header.filter((r) => r.nodemailer > 0).length
-  ).toFixed(1)
-
-  const sapAvgMult = (
-    envelope.filter((r) => r.sapOps > 0).reduce((s, r) => s + r.emailAddress / r.sapOps, 0) /
-    envelope.filter((r) => r.sapOps > 0).length
-  ).toFixed(1)
-
-  const hapiAvgMult =
-    validation && validation.length > 0
-      ? (
-          validation.filter((r) => r.hapi > 0).reduce((s, r) => s + r.emailAddress / r.hapi, 0) /
-          validation.filter((r) => r.hapi > 0).length
-        ).toFixed(1)
-      : null
-
-  function envelopeRows() {
-    return envelope
-      .map(({ label, input, rfc2821: r, sapOps: s, emailAddress: e }) => {
-        return `| ${label} | \`${input}\` | ${fmtOps(e)} | ${fmtOps(r)} | ${fmtOps(s)} |`
-      })
-      .join('\n')
-  }
-
-  function headerRows() {
-    return header
-      .map(({ label, input, rfc2822: o, nodemailer: nm, emailAddress: n }) => {
-        const dispInput = input.length > 52 ? input.slice(0, 50) + '…' : input
-        return `| ${label} | \`${dispInput}\` | ${fmtOps(n)} | ${fmtOps(o)} | ${fmtOps(nm)} |`
-      })
-      .join('\n')
-  }
-
-  function validationRows() {
-    if (!validation || validation.length === 0) return ''
-    return validation
-      .map(({ label, input, emailAddress: e, hapi: h, eaResult, hapiResult }) => {
-        // Show ❌ in the @hapi/address column when it rejects an address email-address accepts —
-        // those timing numbers are meaningless (the inputs are outside its intended scope).
-        const hapiCell = eaResult && !hapiResult ? '❌' : fmtOps(h)
-        return `| ${label} | \`${input}\` | ${fmtOps(e)} | ${hapiCell} |`
-      })
-      .join('\n')
-  }
-
-  const validationSection =
-    validation && validation.length > 0
-      ? `
-## Validation
-
-Both _email-address_ and _@hapi/address_ expose a boolean \`isValid\` / \`isEmailValid\` API. They differ in scope: _email-address_ validates the full Envelope grammar (quoted local-parts, IP literals);
-_@hapi/address_ targets web-form validation and rejects those forms.
-
-| Description | Input | email-address<br>(ops/s) | @hapi/address<br>(ops/s) |
-|-------------|-------|-------------------------:|-------------------------:|
-${validationRows()}
-`
-      : ''
-
-  const summaryHapiRow =
-    hapiAvgMult !== null
-      ? `| [@hapi/address][hapi-a] | Validation | hand-rolled regex + string split | ~${hapiAvgMult}× faster |\n`
-      : ''
+  const sectionMd = orderedSections.map(renderSection).join('\n\n')
 
   return `# Performance Benchmarks
 
-[@haraka/email-address][hea] (referred to as _email-address_ throughout) is benchmarked in the 3 ways it can be used:
+[@haraka/email-address][hea] (referred to as _email-address_ throughout) is benchmarked across the workloads it supports:
 
 1. [Envelope parsing](#envelope-parsing) of SMTP envelope addresses ([RFC 5321][rfc5321]).
 2. [Header parsing](#header-parsing) of Email headers ([RFC 5322][rfc5322]).
@@ -339,32 +439,12 @@ ${validationRows()}
 
 | Package | Domain | Implementation | Avg speedup |
 |--------|--------|---------------|------------:|
-| [address-rfc2821][addr2821] | Envelope | [nearley][nearley] grammar (PEG-like) | ~${envelopeAvgMult}× faster |
-| [smtp-address-parser][sap] | Envelope | [nearley][nearley] grammar (PEG-like) | ~${sapAvgMult}× faster |
-| [address-rfc2822][addr2822] | Header | [email-addresses][eaddr] PEG parser | ~${headerAvgMult}× faster |
-| [nodemailer][nodemailer] | Header | hand-rolled tokeniser | ~${nmAvgMult}× faster |
-${summaryHapiRow}
+${summaryRows(sections)}
+
 - _email-address_ replaces both legacy Haraka packages with a native O(1) recursive descent parser.
 - The nearley-compiled grammars carry a significant per-parse overhead from the Earley chart algorithm.
 
-## Header Parsing
-
-| Description | Input | email-address<br>(ops/s) | address-rfc2822<br>(ops/s) | nodemailer<br>(ops/s) |
-|-------------|-------|-------------------------:|---------------------------:|----------------------:|
-${headerRows()}
-
-- _address-rfc2822_ is a thin wrapper around [_email-addresses_][eaddr], they are equivalent for benchmarking purposes.
-
-## Envelope Parsing
-
-- _address-rfc2821_ and _email-address_ also accept the \`<Path>\` wrapping form used in SMTP commands (\`MAIL FROM:<user@example.com>\`).
-- _smtp-address-parser_ only parses the bare mailbox form.
-
-| Description | Input | email-address<br>(ops/s) | address-rfc2821<br>(ops/s) | smtp-address-parser<br>(ops/s) |
-|-------------|-------|-------------------------:|---------------------------:|-------------------------------:|
-${envelopeRows()}
-
-${validationSection}
+${sectionMd}
 
 ## Environment
 
@@ -403,8 +483,7 @@ if (require.main === module) {
   const results = runBenchmarks()
   const md = generateMarkdown(results)
 
-  const docsDir = path.join(__dirname, '..')
-  const outPath = path.join(docsDir, 'PERFORMANCE.md')
+  const outPath = path.join(__dirname, '..', 'PERFORMANCE.md')
   fs.writeFileSync(outPath, md, 'utf8')
   console.log(`✓ Results written to ${outPath}`)
 }

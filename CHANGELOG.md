@@ -11,6 +11,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 - fix: escape `\()` in comments when wrap would be invalid RFC 5322
 - fix: escape `\"` in `formatPhrase` quoted-string fallback
 - fix: format() throws on control chars in mutated .phrase / .comment
+- feat: benchmarks will run when competitor modules not present
 
 ### [3.1.4] - 2026-05-15
 
