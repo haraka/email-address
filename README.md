@@ -186,12 +186,12 @@ The package's `exports` map resolves to the right file automatically:
 contains a group like `Friends: a@x, b@x;`. Each member `Address` has
 its `.group` field pointing back at the enclosing `Group`.
 
-| Field / Method | Description                                                                                |
-| -------------- | ------------------------------------------------------------------------------------------ |
-| `phrase`       | Group display name.                                                                        |
-| `addresses`    | `Address[]` — group members in document order.                                             |
-| `format()`     | `phrase:addr1,addr2,…` rendering (no trailing `;`, matching the inherited rfc2822 output). |
-| `name()`       | Heuristic personal-name extraction from `phrase`.                                          |
+| Field / Method | Description                                          |
+| -------------- | ---------------------------------------------------- |
+| `phrase`       | Group display name.                                  |
+| `addresses`    | `Address[]` — group members in document order.       |
+| `format()`     | `phrase:addr1,addr2,…;` rendering per RFC 5322 §3.4. |
+| `name()`       | Heuristic personal-name extraction from `phrase`.    |
 
 ### Name-handling utilities
 
@@ -246,5 +246,5 @@ MIT.
 [uts46]: https://www.unicode.org/reports/tr46/
 [ci-img]: https://github.com/haraka/email-address/actions/workflows/ci.yml/badge.svg
 [ci-url]: https://github.com/haraka/email-address/actions/workflows/ci.yml
-[cov-img]: https://codecov.io/github/haraka/email-address/graph/badge.svg?token=fbar73t4OV
+[cov-img]: https://codecov.io/github/haraka/email-address/branch/main/graph/badge.svg?token=fbar73t4OV
 [cov-url]: https://codecov.io/github/haraka/email-address

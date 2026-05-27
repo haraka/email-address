@@ -4,6 +4,14 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [3.1.5] - 2026-05-26
+
+- fix: `Group.format()` now emits the RFC 5322 trailing `;`
+- fix: rehydrate null reverse-path Addresses through JSON.stringify/parse
+- fix: escape `\()` in comments when wrap would be invalid RFC 5322
+- fix: escape `\"` in `formatPhrase` quoted-string fallback
+- fix: format() throws on control chars in mutated .phrase / .comment
+
 ### [3.1.4] - 2026-05-15
 
 - fix: tighten re-hydrated to prevent inheriting asLegacy proxy
@@ -65,3 +73,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 [3.1.2]: https://github.com/haraka/email-address/releases/tag/v3.1.2
 [3.1.3]: https://github.com/haraka/email-address/releases/tag/v3.1.3
 [3.1.4]: https://github.com/haraka/email-address/releases/tag/v3.1.4
+[3.1.5]: https://github.com/haraka/email-address/releases/tag/v3.1.5

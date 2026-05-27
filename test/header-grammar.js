@@ -57,6 +57,41 @@ describe('parseHeader — comments', () => {
   it('throws on unterminated comments', () => {
     assert.throws(() => parseHeader('user@example.com (unterminated'))
   })
+
+  it('escapes parens in a programmatically-set comment', () => {
+    const [a] = parseHeader('user@example.com')
+    a.comment = 'bad)stuff'
+    assert.equal(a.format(), 'user@example.com (bad\\)stuff)')
+  })
+
+  it('escapes a trailing backslash in a programmatically-set comment', () => {
+    const [a] = parseHeader('user@example.com')
+    a.comment = 'oops\\'
+    assert.equal(a.format(), 'user@example.com (oops\\\\)')
+  })
+
+  it('leaves balanced nested parens unescaped on format', () => {
+    const [a] = parseHeader('user@example.com (Outer (Inner) End)')
+    assert.equal(a.format(), 'user@example.com (Outer (Inner) End)')
+  })
+
+  it('escapes double-quote and backslash in a phrase', () => {
+    const [a] = parseHeader('"a\\"b" <x@y>')
+    assert.equal(a.phrase, 'a"b')
+    assert.equal(a.format(), '"a\\"b" <x@y>')
+  })
+
+  it('format() throws if .phrase was mutated to contain CRLF', () => {
+    const [a] = parseHeader('Alice <alice@example.com>')
+    a.phrase = 'Alice\r\nBcc: evil@x'
+    assert.throws(() => a.format(), /control characters/)
+  })
+
+  it('format() throws if .comment was mutated to contain CRLF', () => {
+    const [a] = parseHeader('alice@example.com (Alice)')
+    a.comment = 'hi\r\nX-Inj: evil'
+    assert.throws(() => a.format(), /control characters/)
+  })
 })
 
 describe('parseHeader — display names', () => {
@@ -100,7 +135,7 @@ describe('parseHeader — groups', () => {
     assert.ok(g instanceof Group)
     assert.equal(g.phrase, 'Friends')
     assert.equal(g.addresses.length, 0)
-    assert.equal(g.format(), 'Friends:')
+    assert.equal(g.format(), 'Friends:;')
   })
 
   it('parses a populated group with multiple members', () => {
