@@ -48,6 +48,14 @@ describe('Address constructors', () => {
     assert.equal(reparsed.host, address.host)
     assert.equal(reparsed.format(), address.format())
   })
+
+  it('round-trips a null reverse-path through JSON.stringify/parse', () => {
+    const address = new Address('<>')
+    const reparsed = new Address(JSON.parse(JSON.stringify(address)))
+
+    assert.equal(reparsed.isNull(), true)
+    assert.equal(reparsed.format(), '<>')
+  })
 })
 
 describe('Address formatting methods', () => {
