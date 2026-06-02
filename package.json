@@ -49,20 +49,21 @@
     "node": ">=22"
   },
   "scripts": {
+    "bench": "node scripts/bench.cjs",
     "build:cjs": "node scripts/build-cjs.js",
     "check:cjs": "node scripts/build-cjs.js --check",
-    "bench": "node scripts/bench.cjs",
-    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
-    "prepack": "node scripts/build-cjs.js",
+    "format": "npm run prettier:fix && npm run lint:fix",
     "lint": "npx eslint index.js 'lib/*.js' 'dist/cjs/index.cjs' 'dist/cjs/lib/*.cjs' scripts/*.js test/*.js test/*.cjs",
     "lint:fix": "npx eslint --fix index.js 'lib/*.js' 'dist/cjs/index.cjs' 'dist/cjs/lib/*.cjs' scripts/*.js test/*.js test/*.cjs",
+    "prepack": "node scripts/build-cjs.js",
+    "prepare": "git rev-parse --git-dir >/dev/null 2>&1 && git config core.hooksPath .githooks || true",
+    "prettier": "npx prettier . --check",
+    "prettier:fix": "npx prettier . --write --log-level=warn",
+    "qlty": "qlty smells --all",
     "test": "node --test 'test/*.js' 'test/*.cjs'",
     "test:coverage": "node --test --experimental-test-coverage 'test/*.js'",
     "test:coverage:lcov": "mkdir -p coverage && node --test --experimental-test-coverage --test-reporter=lcov --test-reporter-destination=coverage/lcov.info 'test/*.js'",
     "versions": "npx npm-dep-mgr check",
-    "format": "npm run prettier:fix && npm run lint:fix",
-    "prettier": "npx prettier . --check",
-    "prettier:fix": "npx prettier . --write --log-level=warn",
     "versions:fix": "npx npm-dep-mgr update"
   },
   "repository": {

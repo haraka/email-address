@@ -5,16 +5,15 @@
  * scripts/bench.cjs — Performance comparison:
  *   address-rfc2821      vs  email-address  (envelope / RFC-5321)
  *   smtp-address-parser  vs  email-address  (envelope / RFC-5321)
+ *   email-address-parser vs  email-address  (envelope / RFC-5321)
  *   address-rfc2822      vs  email-address  (header   / RFC-5322)
  *   nodemailer           vs  email-address  (header   / RFC-5322)
  *   @hapi/address        vs  email-address  (validation / isValid)
  *
- * Any competitor whose package isn't installed locally is silently omitted
- * from both the console table and the generated PERFORMANCE.md. A section
- * with no remaining competitors is skipped entirely.
+ * Any competitor whose package isn't installed locally is skipped. Sections
+ * with no remaining competitors are skipped entirely.
  *
  * Run standalone:   'npm run bench'   (from the email-address package root)
- * Import:           const { runBenchmarks } = require('./scripts/bench.cjs')
  *
  * @hapi/address requires a CJS build. To include it:
  *   cd ../../address && npx tsc --outDir dist --module commonjs --moduleResolution node
@@ -33,19 +32,25 @@ const ea = require('../dist/cjs/index.cjs')
 // that need a build step before they can be required.
 const COMPETITOR_INSTALL = {
   rfc2821: {
-    modulePath: '../../address-rfc2821/index.js',
-    targetDir: '../address-rfc2821',
+    modulePath: '../../../address-rfc2821/index.js',
+    targetDir: '../../../address-rfc2821',
     repo: 'https://github.com/haraka/node-address-rfc2821.git',
   },
   rfc2822: {
-    modulePath: '../../address-rfc2822/index.js',
-    targetDir: '../address-rfc2822',
+    modulePath: '../../../address-rfc2822/index.js',
+    targetDir: '../../../address-rfc2822',
     repo: 'https://github.com/haraka/node-address-rfc2822.git',
   },
   sap: {
     modulePath: '../../../smtp-address-parser/dist/lib/index.js',
     targetDir: '../../smtp-address-parser',
     repo: 'https://github.com/gene-hightower/smtp-address-parser.git',
+    postInstall: 'npm install && npm run build',
+  },
+  eap: {
+    modulePath: '../../../email-address-parser/dist/src/index.js',
+    targetDir: '../../../email-address-parser',
+    repo: 'https://github.com/gene-hightower/email-address-parser.git',
     postInstall: 'npm install && npm run build',
   },
   nodemailer: {
@@ -177,6 +182,15 @@ const COMPETITOR_META = {
       impl: '[nearley][nearley] grammar (PEG-like)',
     },
   },
+  eap: {
+    label: 'email-address-parser',
+    available: () => mods.eap !== null,
+    run: (input) => mods.eap.parse(input),
+    summary: {
+      name: '[email-address-parser][eap]',
+      impl: 'hand-rolled split + regex',
+    },
+  },
   rfc2822: {
     label: 'address-rfc2822',
     available: () => mods.rfc2822 !== null,
@@ -207,6 +221,11 @@ const COMPETITOR_META = {
 }
 
 const LOCAL_LABEL = 'email-address'
+const LOCAL_ALIAS = '@h/ea'
+const LOCAL_SUMMARY = {
+  name: '[@haraka/email-address][hea]',
+  impl: 'recursive descent parser',
+}
 const CASE_COL = 22
 
 // Section descriptors. `competitorKeys` lists candidate competitors in display
@@ -215,10 +234,10 @@ const CASE_COL = 22
 const SECTIONS = [
   {
     key: 'envelope',
-    title: 'Envelope address parsing  (RFC 5321)',
+    title: 'Envelope address parsing (RFC 5321)',
     domain: 'Envelope',
     cases: ENVELOPE_CASES,
-    competitorKeys: ['rfc2821', 'sap'],
+    competitorKeys: ['rfc2821', 'sap', 'eap'],
     deltaKey: 'rfc2821',
     local: (input) => new ea.Address(input),
     mdTitle: 'Envelope Parsing',
@@ -228,7 +247,7 @@ const SECTIONS = [
   },
   {
     key: 'header',
-    title: 'Header address parsing  (RFC 5322)',
+    title: 'Header address parsing (RFC 5322)',
     domain: 'Header',
     cases: HEADER_CASES,
     competitorKeys: ['rfc2822', 'nodemailer'],
@@ -364,7 +383,9 @@ function avgSpeedup(section, competitorKey) {
 }
 
 function summaryRows(sections) {
-  const rows = []
+  const rows = [
+    `| ${LOCAL_SUMMARY.name} | \`${LOCAL_ALIAS}\` | All | ${LOCAL_SUMMARY.impl} | baseline |`,
+  ]
   for (const sectionKey of MD_SECTION_ORDER) {
     const section = sections.find((s) => s.key === sectionKey)
     if (!section) continue
@@ -372,7 +393,7 @@ function summaryRows(sections) {
       const speedup = avgSpeedup(section, c.key)
       if (speedup === null) continue
       rows.push(
-        `| ${c.summary.name} | ${section.domain} | ${c.summary.impl} | ~${speedup}× faster |`,
+        `| ${c.summary.name} | \`${c.key}\` | ${section.domain} | ${c.summary.impl} | ~${speedup}× faster |`,
       )
     }
   }
@@ -383,8 +404,8 @@ function sectionTable(section) {
   const headerCells = [
     'Description',
     'Input',
-    `${LOCAL_LABEL}<br>(ops/s)`,
-    ...section.competitors.map((c) => `${c.label}<br>(ops/s)`),
+    `${LOCAL_ALIAS}<br>(ops/s)`,
+    ...section.competitors.map((c) => `${c.key}<br>(ops/s)`),
   ]
   const aligns = ['---', '---', '---:', ...section.competitors.map(() => '---:')]
 
@@ -437,12 +458,13 @@ function generateMarkdown(results) {
 
 ## Summary
 
-| Package | Domain | Implementation | Avg speedup |
-|--------|--------|---------------|------------:|
+| Package | Alias | Domain | Implementation | Avg speedup |
+|--------|-------|--------|---------------|------------:|
 ${summaryRows(sections)}
 
-- _email-address_ replaces both legacy Haraka packages with a native O(1) recursive descent parser.
+- _@h/ea_ replaces both legacy Haraka packages (rfc2821, rfc2822)
 - The nearley-compiled grammars carry a significant per-parse overhead from the Earley chart algorithm.
+- _eap_ is fast, narrowly scoped and very incomplete
 
 ${sectionMd}
 
@@ -472,6 +494,7 @@ Refresh this page with: \`npm run bench\`
 [rfc5321]: https://www.rfc-editor.org/rfc/rfc5321
 [rfc5322]: https://www.rfc-editor.org/rfc/rfc5322
 [sap]: https://github.com/gene-hightower/smtp-address-parser
+[eap]: https://github.com/gene-hightower/email-address-parser
 `
 }
 

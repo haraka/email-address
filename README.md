@@ -1,5 +1,4 @@
-[![Build Status][ci-img]][ci-url]
-[![Coverage Status][cov-img]][cov-url]
+[![Build Status][ci-img]][ci-url] [![Coverage][cov-img]][cov-url] [![Quality][qlty-img]][qlty-url]
 
 # @haraka/email-address
 
@@ -248,3 +247,5 @@ MIT.
 [ci-url]: https://github.com/haraka/email-address/actions/workflows/ci.yml
 [cov-img]: https://codecov.io/github/haraka/email-address/branch/main/graph/badge.svg?token=fbar73t4OV
 [cov-url]: https://codecov.io/github/haraka/email-address
+[qlty-img]: https://qlty.sh/gh/haraka/projects/email-address/maintainability.svg
+[qlty-url]: https://qlty.sh/gh/haraka/projects/email-address
