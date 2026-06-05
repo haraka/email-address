@@ -255,6 +255,29 @@ describe('Address parsing — round-trips and RFC-5321 length limits', () => {
     expectOk(`<${local}@b>`, { user: local, host: 'b' })
   })
 
+  it('local-part over 64 octets is rejected by default', () => {
+    assert.throws(() => new Address(`<${'a'.repeat(65)}@b>`), /local-part exceeds 64 octets/)
+  })
+
+  it('postel: true accepts an over-64-octet local-part (VERP/SRS, issue #8)', () => {
+    const local =
+      'duo-srs0=y11n=D6=em3828.signin.autodesk.com=bounces+41143108-218e-user1234=test.com'
+    const input = `<${local}@mx1.mailhop.org>`
+
+    assert.throws(() => new Address(input), /local-part exceeds 64 octets/)
+
+    const address = new Address(input, { postel: true })
+    assert.equal(address.user, local)
+    assert.equal(address.host, 'mx1.mailhop.org')
+  })
+
+  it('postel: true still enforces the 998-octet path limit', () => {
+    assert.throws(
+      () => new Address(`<${'a'.repeat(995)}@b>`, { postel: true }),
+      /path exceeds 998 octets/,
+    )
+  })
+
   it('sub-domain of 63 octets is accepted', () => {
     const subdomain = 'a'.repeat(63)
     expectOk(`<u@${subdomain}.example.com>`, {

@@ -4,6 +4,12 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [3.1.6] - 2026-06-05
+
+- feat: added `Address#toJSON` #9
+- feat: `postel: true` relaxes the 64-octet local-part limit to 998
+  octets, accepting bloated VERP/SRS forwarding addresses #9
+
 ### [3.1.5] - 2026-05-26
 
 - fix: `Group.format()` now emits the RFC 5322 trailing `;`
@@ -75,3 +81,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 [3.1.3]: https://github.com/haraka/email-address/releases/tag/v3.1.3
 [3.1.4]: https://github.com/haraka/email-address/releases/tag/v3.1.4
 [3.1.5]: https://github.com/haraka/email-address/releases/tag/v3.1.5
+[3.1.6]: https://github.com/haraka/email-address/releases/tag/v3.1.6

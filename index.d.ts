@@ -78,6 +78,19 @@ export declare class Address {
   name(): string
 
   toString(): string
+
+  /** Lean wire shape for persistence; omits empty header metadata and transient parser opts. */
+  toJSON(): {
+    phrase?: string
+    comment?: string
+    group?: Group
+    original: string
+    original_host?: string
+    host: string
+    user: string
+    is_utf8?: boolean
+    _kind?: string
+  }
 }
 
 export declare class Group {

@@ -151,9 +151,14 @@ class Address {
     let domainpart = result.domain
     this.original_host = domainpart
 
-    // RFC-5321 §4.5.3.1.1: 64 octet local-part
-    if (Buffer.byteLength(result.local_part, 'utf8') > 64) {
-      throw new Error('RFC-5321 local-part exceeds 64 octets')
+    // RFC-5321 §4.5.3.1.1: 64 octet local-part. Under `postel: true` the
+    // cap is raised to the §4.5.3.1.6 SMTP text-line maximum so bloated
+    // VERP/SRS forwarding local-parts seen in the wild are accepted, and
+    // so the envelope parser matches the header parser, which never
+    // enforced this limit.
+    const maxLocalPart = this.opts?.postel ? 998 : 64
+    if (Buffer.byteLength(result.local_part, 'utf8') > maxLocalPart) {
+      throw new Error(`RFC-5321 local-part exceeds ${maxLocalPart} octets`)
     }
     // RFC-5321 §4.5.3.1.2: 255 octet domain (defense-in-depth; the
     // 256-octet path cap above makes this branch unreachable today).
@@ -205,6 +210,26 @@ class Address {
 
   toString() {
     return this.format()
+  }
+
+  // Serialized addresses are persisted (e.g. Haraka's outbound queue) and
+  // rehydrated via `new Address(json)`, so the wire shape stays lean
+  // and stable. Envelope addresses carry no phrase/comment/group/opts and
+  // since only populated fields are emitted, this toJSON preserves the
+  // addr-rfc2821 wire shape.
+  toJSON() {
+    const { phrase, comment, group, original, original_host, host, user, is_utf8, _kind } = this
+    return {
+      ...(phrase && { phrase }),
+      ...(comment && { comment }),
+      ...(group && { group }),
+      original,
+      original_host,
+      host,
+      user,
+      ...(is_utf8 && { is_utf8 }),
+      ...(_kind && { _kind }),
+    }
   }
 }
 
