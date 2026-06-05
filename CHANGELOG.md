@@ -7,6 +7,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 ### [3.1.6] - 2026-06-05
 
 - feat: added `Address#toJSON`
+- feat: `postel: true` relaxes the 64-octet local-part limit to 998
+  octets, accepting bloated VERP/SRS forwarding addresses
 
 ### [3.1.5] - 2026-05-26
 
