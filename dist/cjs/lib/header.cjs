@@ -188,7 +188,7 @@ function parseHeaderPhrase(cursor, opts, sink) {
       parts.push('.')
       continue
     }
-    if (prev && !prev.endsWith('.')) parts.push(' ')
+    if (prev && prev !== '.') parts.push(' ')
     if (t) parts.push(t)
   }
   return parts.join('')

@@ -53,6 +53,7 @@ describe('parseHeader — phrase joining', () => {
     ['"a  " . b <x@example.com>', 'a .b'],
     ['"" . a <x@example.com>', '.a'],
     ['a . b . c <x@example.com>', 'a.b.c'],
+    ['"Dr." Smith <x@example.com>', 'Dr. Smith'],
   ]) {
     it(`${JSON.stringify(input)} → ${JSON.stringify(phrase)}`, () => {
       assert.equal(parseHeader(input)[0].phrase, phrase)
