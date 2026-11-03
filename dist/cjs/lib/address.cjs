@@ -47,7 +47,7 @@ class Group {
   }
 
   format() {
-    const head = this.phrase
+    const head = this.phrase ? formatPhrase(this.phrase) : ''
     const body = this.addresses.map((a) => a.format()).join(',')
     return `${head}:${body};`
   }
@@ -222,7 +222,8 @@ class Address {
     return {
       ...(phrase && { phrase }),
       ...(comment && { comment }),
-      ...(group && { group }),
+      // the full Group lists this address, so emitting it is circular
+      ...(group && { group: { phrase: group.phrase } }),
       original,
       original_host,
       host,

@@ -83,7 +83,7 @@ export declare class Address {
   toJSON(): {
     phrase?: string
     comment?: string
-    group?: Group
+    group?: { phrase: string }
     original: string
     original_host?: string
     host: string

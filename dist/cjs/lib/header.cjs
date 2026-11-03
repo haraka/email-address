@@ -115,6 +115,8 @@ function parseHeaderQuotedString(cursor) {
   const rawStart = cursor.pos
   cursor.expect('"')
   let text = ''
+  // not text.endsWith(): reading a growing string flattens it, O(n²)
+  let endsWithSpace = false
   while (true) {
     if (cursor.done()) throw parseError('unterminated quoted-string', cursor)
     const ch = cursor.peek()
@@ -125,20 +127,25 @@ function parseHeaderQuotedString(cursor) {
     if (ch === '\\') {
       cursor.consume(1)
       if (cursor.done()) throw parseError('quoted-pair at end of input', cursor)
-      text += cursor.peek()
-      cursor.consume(1)
+      const escaped = cursor.consume(1)
+      text += escaped
+      endsWithSpace = escaped === ' '
       continue
     }
     if (ch === ' ' || ch === '\t' || ch === '\r' || ch === '\n') {
       // FWS inside quoted-string folds to a single space.
       if (cursor.match(FWS_RE)) {
-        if (text.length && !text.endsWith(' ')) text += ' '
+        if (text.length && !endsWithSpace) {
+          text += ' '
+          endsWithSpace = true
+        }
         continue
       }
     }
     const matched = cursor.match(QTEXT_RE)
     if (!matched) throw parseError('invalid character in quoted-string', cursor)
     text += matched
+    endsWithSpace = matched.endsWith(' ')
   }
 }
 
@@ -168,19 +175,13 @@ function parseHeaderPhrase(cursor, opts, sink) {
     break
   }
   if (wordsAndDots.length === 0) throw parseError('expected phrase', cursor)
-  // Join with single space, but allow "." to abut the surrounding word.
-  let out = ''
-  for (let i = 0; i < wordsAndDots.length; i += 1) {
-    const t = wordsAndDots[i]
-    if (t === '.') {
-      out = out.replace(/ $/, '') + '.'
-    } else if (out.length && !out.endsWith('.')) {
-      out += ' ' + t
-    } else {
-      out += t
-    }
+  // array join: inspecting a growing string per token is O(n²)
+  const parts = []
+  for (const t of wordsAndDots) {
+    if (t !== '.' && parts.length && parts[parts.length - 1] !== '.') parts.push(' ')
+    parts.push(t)
   }
-  return out
+  return parts.join('')
 }
 
 function isAtextStart(ch, opts) {
@@ -253,16 +254,24 @@ function parseHeaderDomain(cursor, sink) {
     return parseAddressLiteral(cursor)
   }
   let domain = ''
+  let domainOctets = 0
   while (true) {
     const labelStart = cursor.pos
     if (!cursor.match(HEADER_SUB_DOMAIN_RE)) {
-      if (domain.length === 0) throw parseError('expected domain label', cursor)
-      break
+      // a trailing dot lets `example.com.` evade exact-match domain checks
+      throw parseError(domain ? 'expected domain label after "."' : 'expected domain label', cursor)
     }
-    if (Buffer.byteLength(cursor.input.slice(labelStart, cursor.pos), 'utf8') > 63) {
+    const label = cursor.input.slice(labelStart, cursor.pos)
+    const labelOctets = Buffer.byteLength(label, 'utf8')
+    if (labelOctets > 63) {
       throw parseError('sub-domain label exceeds 63 octets', cursor)
     }
-    domain += cursor.input.slice(labelStart, cursor.pos)
+    // RFC-5321 §4.5.3.1.2
+    domainOctets += labelOctets + (domain ? 1 : 0)
+    if (domainOctets > 255) {
+      throw parseError('domain exceeds 255 octets', cursor)
+    }
+    domain += label
     const beforeCFWS = cursor.pos
     // Speculative scratch sink, same reasoning as parseHeaderLocalPart.
     const scratch = []
@@ -345,49 +354,69 @@ function parseHeaderMailbox(cursor, opts) {
   return finishMailbox(cursor, spec, '', joinComments(sink))
 }
 
-// Look ahead for an angle-addr without consuming. Skips over quoted
-// strings and comments so a "<" inside them doesn't fool us. When
-// `allowCommaInDisplayName` is set, top-level `,` does not terminate
-// the scan (it could be part of the display name).
-function hasAngleBracketComing(cursor, opts) {
-  let i = cursor.pos
-  const s = cursor.input
+const MEMO_PENDING = -1
+
+const stopTable = (chars) => {
+  const t = new Uint8Array(128)
+  for (const ch of chars) t[ch.charCodeAt(0)] = 1
+  return t
+}
+const ANGLE_STOPS = stopTable('<;:,')
+const ANGLE_STOPS_COMMA_OK = stopTable('<;:')
+const GROUP_STOPS = stopTable(':<@,;')
+
+// The memo is sound because the walk is deterministic: a walk started
+// at any depth-0 position this one passed reaches the same stop.
+function findTopLevel(s, start, stops, memo) {
+  let i = start
   let depth = 0
+  let found = s.length
   while (i < s.length) {
-    const ch = s[i]
-    if (ch === '(') {
-      depth += 1
-      i += 1
-      continue
-    }
-    if (ch === ')') {
-      depth -= 1
-      i += 1
-      continue
-    }
-    if (depth > 0) {
-      if (ch === '\\') {
-        i += 2
-        continue
+    if (memo && depth === 0) {
+      if (memo[i] > 0) {
+        found = memo[i] - 1
+        break
       }
-      i += 1
-      continue
+      memo[i] = MEMO_PENDING
     }
-    if (ch === '"') {
-      i += 1
-      while (i < s.length && s[i] !== '"') {
-        if (s[i] === '\\') i += 1
-        i += 1
-      }
-      i += 1
+    const c = s.charCodeAt(i)
+    if (c === 0x28) depth += 1
+    else if (c === 0x29) depth -= 1
+    else if (depth > 0) {
+      if (c === 0x5c) i += 1
+    } else if (c === 0x22) {
+      i = skipQuoted(s, i)
       continue
+    } else if (stops[c] === 1) {
+      found = i
+      break
     }
-    if (ch === '<') return true
-    if (ch === ';' || ch === ':') return false
-    if (ch === ',' && !opts?.allowCommaInDisplayName) return false
     i += 1
   }
-  return false
+  if (memo) fillPending(memo, start, Math.min(i + 1, s.length), found + 1)
+  return found
+}
+
+function fillPending(memo, from, to, value) {
+  for (let k = from; k < to; k += 1) {
+    if (memo[k] === MEMO_PENDING) memo[k] = value
+  }
+}
+
+function skipQuoted(s, i) {
+  i += 1
+  while (i < s.length && s.charCodeAt(i) !== 0x22) i += s.charCodeAt(i) === 0x5c ? 2 : 1
+  return i + 1
+}
+
+// Only allowCommaInDisplayName lets the scan run past this mailbox's
+// `,` to end-of-input, so only it needs the memo to stay linear.
+function hasAngleBracketComing(cursor, opts) {
+  const s = cursor.input
+  if (!opts?.allowCommaInDisplayName)
+    return s[findTopLevel(s, cursor.pos, ANGLE_STOPS, null)] === '<'
+  cursor.angleMemo ??= new Int32Array(s.length)
+  return s[findTopLevel(s, cursor.pos, ANGLE_STOPS_COMMA_OK, cursor.angleMemo)] === '<'
 }
 
 function finishMailbox(_cursor, spec, phrase, comment) {
@@ -455,43 +484,8 @@ function parseHeaderAddress(cursor, opts) {
 // Detect "phrase ':'" at the top level (no `<` in the way). Used to
 // decide between mailbox and group productions.
 function hasGroupColonComing(cursor) {
-  let i = cursor.pos
   const s = cursor.input
-  let depth = 0
-  while (i < s.length) {
-    const ch = s[i]
-    if (ch === '(') {
-      depth += 1
-      i += 1
-      continue
-    }
-    if (ch === ')') {
-      depth -= 1
-      i += 1
-      continue
-    }
-    if (depth > 0) {
-      if (ch === '\\') {
-        i += 2
-        continue
-      }
-      i += 1
-      continue
-    }
-    if (ch === '"') {
-      i += 1
-      while (i < s.length && s[i] !== '"') {
-        if (s[i] === '\\') i += 1
-        i += 1
-      }
-      i += 1
-      continue
-    }
-    if (ch === ':') return true
-    if (ch === '<' || ch === '@' || ch === ',' || ch === ';') return false
-    i += 1
-  }
-  return false
+  return s[findTopLevel(s, cursor.pos, GROUP_STOPS, null)] === ':'
 }
 
 // Used under `postel: true` to eat any `(CFWS ",")*` run — implements
@@ -506,6 +500,8 @@ function skipNullEntries(cursor) {
 
 function parseHeaderGroup(cursor, opts) {
   const phrase = parseHeaderPhrase(cursor, opts, null)
+  // a quoted-pair can smuggle CR/LF, which Group.format() would emit
+  if (hasCtrl(phrase)) throw parseError('control character in group display name', cursor)
   skipCFWS(cursor, null)
   cursor.expect(':')
   if (opts?.postel) skipNullEntries(cursor)

@@ -104,10 +104,17 @@ function validateIPv6(s) {
 // Convert a U-label domain to its A-label (punycode) form via the
 // platform's UTS-46 implementation. Returns the original string when
 // there is no non-ASCII content, throws on invalid IDN input.
+//
+// RFC-1035 §2.3.4 limits bind the A-label, which can exceed 63 octets
+// when the U-label doesn't; domainToASCII doesn't enforce them.
 function toASCIIDomain(domain) {
   if (!NON_ASCII_RE.test(domain)) return domain
   const ascii = domainToASCII(domain)
   if (!ascii) throw new Error('invalid IDN domain')
+  if (ascii.length > 255) throw new Error('IDN domain exceeds 255 octets')
+  for (const label of ascii.split('.')) {
+    if (label.length > 63) throw new Error('IDN label exceeds 63 octets')
+  }
   return ascii
 }
 

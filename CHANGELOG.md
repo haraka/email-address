@@ -4,6 +4,15 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+- fix: O(n²) parse of long phrases, quoted-strings
+- fix: O(n²) lookahead w/ allowCommaInDisplayName
+- fix: reject control chars in group display name
+- fix: quote specials in `Group.format()` phrase
+- fix: circular JSON for a group member Address
+- fix: reject trailing dot in header domains
+- fix: enforce 255-octet header domain limit
+- fix: enforce 63/255-octet limits on IDN A-labels
+
 ### [3.1.6] - 2026-06-05
 
 - feat: added `Address#toJSON` #9
