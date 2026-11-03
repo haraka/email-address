@@ -42,6 +42,25 @@ describe('parseHeader — linear time on hostile input', () => {
   })
 })
 
+describe('parseHeader — phrase joining', () => {
+  for (const [input, phrase] of [
+    ['"" a <x@example.com>', 'a'],
+    ['"" "" a <x@example.com>', 'a'],
+    ['"" g: a@example.com;', 'g'],
+    ['a "" . b <x@example.com>', 'a.b'],
+    ['"a " . b <x@example.com>', 'a.b'],
+    ['a . "" b <x@example.com>', 'a.b'],
+    ['"a  " . b <x@example.com>', 'a .b'],
+    ['"" . a <x@example.com>', '.a'],
+    ['a . b . c <x@example.com>', 'a.b.c'],
+    ['"Dr." Smith <x@example.com>', 'Dr. Smith'],
+  ]) {
+    it(`${JSON.stringify(input)} → ${JSON.stringify(phrase)}`, () => {
+      assert.equal(parseHeader(input)[0].phrase, phrase)
+    })
+  }
+})
+
 describe('parseHeader — allowCommaInDisplayName lookahead memo', () => {
   it('still finds a trailing angle-addr after a long comma run', () => {
     const [a] = parseHeader(`Doe, ${'x, '.repeat(500)}John <j@example.com>`, {

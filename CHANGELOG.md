@@ -4,6 +4,8 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### Unreleased
 
+### [3.1.7] - 2026-11-02
+
 - fix: O(n²) parse of long phrases, quoted-strings
 - fix: O(n²) lookahead w/ allowCommaInDisplayName
 - fix: reject control chars in group display name
@@ -91,3 +93,4 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 [3.1.4]: https://github.com/haraka/email-address/releases/tag/v3.1.4
 [3.1.5]: https://github.com/haraka/email-address/releases/tag/v3.1.5
 [3.1.6]: https://github.com/haraka/email-address/releases/tag/v3.1.6
+[3.1.7]: https://github.com/haraka/email-address/releases/tag/v3.1.7
