@@ -6,8 +6,6 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/).
 
 ### [3.1.7] - 2026-11-02
 
-- proactive find-and-fix
-
 - fix: O(n²) parse of long phrases, quoted-strings
 - fix: O(n²) lookahead w/ allowCommaInDisplayName
 - fix: reject control chars in group display name

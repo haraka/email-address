@@ -175,11 +175,21 @@ function parseHeaderPhrase(cursor, opts, sink) {
     break
   }
   if (wordsAndDots.length === 0) throw parseError('expected phrase', cursor)
-  // array join: inspecting a growing string per token is O(n²)
+  // array join: inspecting a growing string per token is O(n²). Parts
+  // are never empty, so the last part's tail is the output's tail.
   const parts = []
   for (const t of wordsAndDots) {
-    if (t !== '.' && parts.length && parts[parts.length - 1] !== '.') parts.push(' ')
-    parts.push(t)
+    const prev = parts.at(-1)
+    if (t === '.') {
+      if (prev?.endsWith(' ')) {
+        parts.pop()
+        if (prev.length > 1) parts.push(prev.slice(0, -1))
+      }
+      parts.push('.')
+      continue
+    }
+    if (prev && !prev.endsWith('.')) parts.push(' ')
+    if (t) parts.push(t)
   }
   return parts.join('')
 }
